@@ -1,0 +1,303 @@
+"""
+Ponto de Entrada Interativo do MVP — Cérebro Cognitivo Fractal Multi-Agente.
+Oferece dois modos de operação reais sobre o motor canônico:
+1. Modo Servidor Web Interativo (Studio Live em http://127.0.0.1:8765)
+2. Modo CLI Interativo no Terminal (`python run_mvp.py --cli` ou `--prompt "..."`)
+"""
+
+from __future__ import annotations
+import argparse
+import json
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
+import sys
+import time
+from typing import Any, Dict, List
+import webbrowser
+
+PROJECT_ROOT = Path(__file__).resolve().parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from core.schemas import (
+    Claim,
+    HypothesisPayload,
+    ProvenancePointer,
+    ProvenanceType,
+    SynapticSignal,
+    VerdictStatus,
+)
+from core.event_store import EpistemicEventStore
+from core.neuron import CognitiveNeuron
+from core.cortex import FractalCognitiveCortex
+from dashboard.inspector_generator import generate_telemetry_dashboard
+from tests.chaos_benchmark import run_chaos_benchmark
+
+
+DATA_DIR = PROJECT_ROOT / "data"
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+DEFAULT_DB = DATA_DIR / "epistemic_brain.db"
+DEFAULT_JSONL = DATA_DIR / "epistemic_events.jsonl"
+
+
+def execute_objective_in_cortex(objective: str, inject_fault_mode: str = "none") -> Dict[str, Any]:
+    """
+    Executa um objetivo real no Córtex Global (ou simula injeção de falha controlada
+    para demonstrar o Rollback Causal ao vivo) e atualiza o painel de telemetria.
+    """
+    store = EpistemicEventStore(db_path=str(DEFAULT_DB), jsonl_path=str(DEFAULT_JSONL))
+    t0 = time.perf_counter()
+
+    try:
+        if inject_fault_mode == "hallucination_v1":
+            # Demonstração ao vivo: Iteração 1 alucina sem ProvenancePointer -> V1 bloqueia -> Iteração 2 corrige
+            def thinker_v1(sig: SynapticSignal, it: int, neg: List[str]) -> HypothesisPayload:
+                if it == 1:
+                    return HypothesisPayload(
+                        iteration=it,
+                        description=f"Hipótese inicial sem lastro para: {objective}",
+                        claims=[Claim(statement=f"Suposição não verificada sobre: {objective}", provenance=None)],
+                        code_artifact="def solve() -> bool:\n    return True\n",
+                        entrypoint_function="solve",
+                        expected_invariants=["solve() is True"],
+                        negative_constraints_applied=list(neg),
+                    )
+                prov = ProvenancePointer(
+                    source_type=ProvenanceType.AXIOM_USER,
+                    reference_id=sig.signal_id,
+                    excerpt=f"Axioma validado para: {objective}",
+                )
+                return HypothesisPayload(
+                    iteration=it,
+                    description=f"Hipótese corrigida após Rollback V1 para: {objective}",
+                    claims=[Claim(statement=f"Solução formalmente ancorada para: {objective}", provenance=prov)],
+                    code_artifact="def solve() -> bool:\n    return True\n",
+                    entrypoint_function="solve",
+                    expected_invariants=["solve() is True"],
+                    negative_constraints_applied=list(neg),
+                )
+
+            neuron = CognitiveNeuron(
+                neuron_id="neuron_live_v1_demo",
+                specialty="Auditoria Lógica V1",
+                event_store=store,
+                max_iterations=3,
+                custom_thinker_fn=thinker_v1,
+            )
+            sig = SynapticSignal(
+                source_neuron="user_live_input",
+                target_neuron="neuron_live_v1_demo",
+                task_intent=objective,
+                axioms=[f"Objetivo do usuário: {objective}"],
+            )
+            cert = neuron.process_signal(sig, branch_id="live_v1_branch")
+            result_payload = cert.to_dict()
+
+        elif inject_fault_mode == "runtime_bug_v2":
+            # Demonstração ao vivo: Iteração 1 gera ZeroDivisionError -> V2 Sandbox bloqueia -> Iteração 2 corrige
+            def thinker_v2(sig: SynapticSignal, it: int, neg: List[str]) -> HypothesisPayload:
+                prov = ProvenancePointer(
+                    source_type=ProvenanceType.DETERMINISTIC_EXEC,
+                    reference_id=sig.signal_id,
+                    excerpt=f"Execução em Sandbox para: {objective}",
+                )
+                if it == 1:
+                    return HypothesisPayload(
+                        iteration=it,
+                        description="Tentativa 1 com erro de execução (ZeroDivisionError)",
+                        claims=[Claim(statement="Cálculo aritmético direto.", provenance=prov)],
+                        code_artifact="def compute(x: int) -> float:\n    return 100 / (x - x)\n",
+                        entrypoint_function="compute",
+                        expected_invariants=["compute(10) == 10.0"],
+                        negative_constraints_applied=list(neg),
+                    )
+                return HypothesisPayload(
+                    iteration=it,
+                    description="Tentativa 2 corrigida após captura de stderr no Sandbox V2",
+                    claims=[Claim(statement="Cálculo protegido contra divisão por zero.", provenance=prov)],
+                    code_artifact="def compute(x: int) -> float:\n    return 10.0 if x == 10 else float(x)\n",
+                    entrypoint_function="compute",
+                    expected_invariants=["compute(10) == 10.0"],
+                    negative_constraints_applied=list(neg),
+                )
+
+            neuron = CognitiveNeuron(
+                neuron_id="neuron_live_v2_demo",
+                specialty="Sandbox Determinístico V2",
+                event_store=store,
+                max_iterations=3,
+                custom_thinker_fn=thinker_v2,
+            )
+            sig = SynapticSignal(
+                source_neuron="user_live_input",
+                target_neuron="neuron_live_v2_demo",
+                task_intent=objective,
+                axioms=[f"Objetivo do usuário: {objective}"],
+            )
+            cert = neuron.process_signal(sig, branch_id="live_v2_branch")
+            result_payload = cert.to_dict()
+
+        else:
+            # Execução completa no Córtex Global (Tálamo -> 5 Especialistas em DAG -> Convergência)
+            cortex = FractalCognitiveCortex(event_store=store)
+            cortex_res = cortex.process(objective=objective)
+            result_payload = cortex_res.to_dict()
+
+        elapsed_ms = (time.perf_counter() - t0) * 1000.0
+        dag_summary = store.export_dag_summary()
+
+        # Atualizar dashboard estático também
+        bench_path = DATA_DIR / "chaos_benchmark_report.json"
+        bench_data = json.loads(bench_path.read_text(encoding="utf-8")) if bench_path.exists() else None
+        generate_telemetry_dashboard(
+            dag_summary=dag_summary,
+            benchmark_results=bench_data,
+            output_html_path=str(PROJECT_ROOT / "dashboard" / "inspector_telemetria.html"),
+        )
+
+        return {
+            "ok": True,
+            "objective": objective,
+            "inject_fault_mode": inject_fault_mode,
+            "elapsed_ms": round(elapsed_ms, 2),
+            "result": result_payload,
+            "dag_summary": {
+                "total_events": dag_summary["total_events"],
+                "total_branches": dag_summary["total_branches"],
+                "total_rollbacks": dag_summary["total_rollbacks"],
+                "chain_integrity_valid": dag_summary["chain_integrity_valid"],
+            },
+        }
+    finally:
+        store.close()
+
+
+def run_cli_one_shot(prompt: str, fault_mode: str = "none") -> None:
+    print("=" * 78)
+    print(" CÉREBRO COGNITIVO FRACTAL MULTI-AGENTE · EXECUÇÃO DO MVP")
+    print("=" * 78)
+    print(f" -> Estímulo Sensorial: {prompt}")
+    print(f" -> Modo de Injeção de Falha: {fault_mode}")
+    print("-" * 78)
+
+    response = execute_objective_in_cortex(prompt, inject_fault_mode=fault_mode)
+    summary = response["dag_summary"]
+    res = response["result"]
+
+    print(f" [STATUS FINAL]      : {res.get('status')}")
+    print(f" [TEMPO DE EXECUÇÃO] : {response['elapsed_ms']} ms")
+    print(f" [TOTAL DE EVENTOS]  : {summary['total_events']} eventos imutáveis no SQLite WAL")
+    print(f" [BRANCHES NO DAG]   : {summary['total_branches']} branches | {summary['total_rollbacks']} rollbacks causais")
+    print(f" [CADEIA SHA-256]    : {'100% ÍNTEGRA E VERIFICADA' if summary['chain_integrity_valid'] else 'VIOLAÇÃO DETECTADA'}")
+
+    if "certificates" in res:
+        print("\n -> Certificados Emitidos pelos 5 Neurônios Especialistas do Córtex:")
+        for nid, cert in res["certificates"].items():
+            print(
+                f"    • {nid:<28} | Status: {cert['status']:<10} | "
+                f"Iterações: {cert['total_iterations']} | Hash: {cert['certificate_hash'][:22]}..."
+            )
+    else:
+        print(
+            f"\n -> Certificado do Neurônio ({res.get('neuron_id')}): "
+            f"Status={res.get('status')} | Iterações={res.get('total_iterations')} | "
+            f"Hash={str(res.get('certificate_hash'))[:24]}..."
+        )
+
+    print("-" * 78)
+    print(f" Painel de Telemetria atualizado em: {PROJECT_ROOT / 'dashboard' / 'inspector_telemetria.html'}")
+    print("=" * 78)
+
+
+class MVPStudioHandler(BaseHTTPRequestHandler):
+    """Servidor HTTP local que serve o Painel Interativo e a API de Execução do Cérebro."""
+
+    def log_message(self, format: str, *args: Any) -> None:
+        pass
+
+    def _send_json(self, data: Dict[str, Any], status: int = 200) -> None:
+        raw = json.dumps(data, ensure_ascii=False).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(raw)))
+        self.end_headers()
+        self.wfile.write(raw)
+
+    def do_GET(self) -> None:
+        if self.path in ("/", "/index.html", "/dashboard"):
+            dash_path = PROJECT_ROOT / "dashboard" / "inspector_telemetria.html"
+            if not dash_path.exists():
+                run_chaos_benchmark()
+            html = dash_path.read_text(encoding="utf-8")
+            raw = html.encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(raw)))
+            self.end_headers()
+            self.wfile.write(raw)
+        elif self.path == "/api/status":
+            store = EpistemicEventStore(db_path=str(DEFAULT_DB), jsonl_path=str(DEFAULT_JSONL))
+            try:
+                summary = store.export_dag_summary()
+            finally:
+                store.close()
+            self._send_json({"ok": True, "summary": summary})
+        else:
+            self.send_error(404, "Rota nao encontrada")
+
+    def do_POST(self) -> None:
+        if self.path == "/api/execute":
+            length = int(self.headers.get("Content-Length", "0"))
+            body = json.loads(self.rfile.read(length).decode("utf-8") or "{}")
+            objective = body.get("objective", "Validar invariantes formais do sistema")
+            fault_mode = body.get("fault_mode", "none")
+            out = execute_objective_in_cortex(objective, inject_fault_mode=fault_mode)
+            self._send_json(out)
+        else:
+            self.send_error(404, "Rota POST nao encontrada")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="MVP Executável — Cérebro Cognitivo Fractal Multi-Agente")
+    parser.add_argument("--prompt", type=str, default=None, help="Executa uma missão diretamente no Córtex via terminal")
+    parser.add_argument(
+        "--fault",
+        type=str,
+        default="none",
+        choices=["none", "hallucination_v1", "runtime_bug_v2"],
+        help="Simula injeção de falha na Iteração 1 para demonstrar o Rollback Causal e auto-correção",
+    )
+    parser.add_argument("--chaos", action="store_true", help="Reexecuta os 7 cenários da Bateria de Engenharia de Caos")
+    parser.add_argument("--serve", action="store_true", help="Inicia o servidor web local na porta 8765")
+    parser.add_argument("--port", type=int, default=8765, help="Porta HTTP para o modo --serve (padrão: 8765)")
+    args = parser.parse_args()
+
+    if args.chaos:
+        results = run_chaos_benchmark()
+        print(f"Bateria de Caos concluída: {results['scenarios_contained']}/{results['total_scenarios']} contidos.")
+        return
+
+    if args.prompt:
+        run_cli_one_shot(args.prompt, fault_mode=args.fault)
+        return
+
+    if args.serve:
+        server = HTTPServer(("127.0.0.1", args.port), MVPStudioHandler)
+        url = f"http://127.0.0.1:{args.port}/"
+        print(f"Servidor MVP ativo em: {url} (Pressione Ctrl+C para encerrar)")
+        try:
+            webbrowser.open(url)
+        except Exception:
+            pass
+        server.serve_forever()
+        return
+
+    # Execução padrão demonstrativa se nenhum argumento for passado
+    run_cli_one_shot(
+        "Projetar, auditar e certificar módulo de verificação criptográfica tolerante a falhas bizantinas",
+        fault_mode="none",
+    )
+
+
+if __name__ == "__main__":
+    main()
