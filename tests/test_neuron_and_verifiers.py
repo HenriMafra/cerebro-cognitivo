@@ -549,6 +549,19 @@ def test_neuron_with_sqlite_epistemic_event_store():
     assert len(violations) == 0
 
 
+import unittest
+
+
+class TestNeuronAndVerifiersSuite(unittest.TestCase):
+    """Wrapper unittest para integração com 'python -m unittest discover'."""
+    pass
+
+
+for _name, _fn in list(globals().items()):
+    if _name.startswith("test_") and callable(_fn):
+        setattr(TestNeuronAndVerifiersSuite, _name, staticmethod(_fn))
+
+
 if __name__ == "__main__":
     test_funcs = [v for k, v in list(globals().items()) if k.startswith("test_") and callable(v)]
     print(f"\n=======================================================")

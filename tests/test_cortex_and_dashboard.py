@@ -11,9 +11,16 @@ Valida:
 
 from __future__ import annotations
 import os
+from pathlib import Path
 import shutil
+import sys
 import tempfile
 import unittest
+
+_ROOT = Path(__file__).resolve().parent.parent
+for _p in (str(_ROOT), str(_ROOT.parent)):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
 from cerebro_cognitivo.core.cortex import (
     ConvergenceSynthesisNeuron,

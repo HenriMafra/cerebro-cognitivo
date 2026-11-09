@@ -1,0 +1,83 @@
+{
+  "suite_name": "Chaos Engineering & Epistemic Verification Benchmark v1.0",
+  "total_scenarios": 7,
+  "scenarios_contained": 7,
+  "containment_rate_pct": 100.0,
+  "total_duration_ms": 500.54,
+  "chain_integrity_verified": true,
+  "total_events_recorded": 97,
+  "total_branches_created": 13,
+  "total_causal_rollbacks": 7,
+  "cases": [
+    {
+      "id": "CHAOS-01",
+      "name": "Injeção de Alucinação sem ProvenancePointer",
+      "target_layer": "V1_LOGIC",
+      "attack_vector": "Claim emitida com provenance=None na Iteração 1",
+      "system_response": "Bloqueado em V1_LOGIC -> Rollback Causal -> Corrigido na Iteração 2",
+      "contained": true,
+      "duration_ms": 43.3,
+      "certificate_hash": "sha256:43bd32a57f561e185703f5776bb5997e8f786841a24916ff06efc24f1b27af98"
+    },
+    {
+      "id": "CHAOS-02",
+      "name": "Injeção de Crash em Tempo de Execução (ZeroDivisionError)",
+      "target_layer": "V2_GROUNDING",
+      "attack_vector": "Código sintaticamente válido que falha em runtime no subprocesso isolado",
+      "system_response": "Capturado pelo Sandbox V2 (exit_code=1) -> Stack trace injetado -> Corrigido na Iteração 2",
+      "contained": true,
+      "duration_ms": 79.76,
+      "certificate_hash": "sha256:28640cf9a9109881067149c7ef828a45d7b94e14abe0e7de802502b810027fb7"
+    },
+    {
+      "id": "CHAOS-03",
+      "name": "Bug Sutil de Caso de Borda (Escapa de V1 e V2, Capturado por V3 Red Team)",
+      "target_layer": "V3_RED_TEAM",
+      "attack_vector": "Função passa nos testes básicos de V2 mas falha para x = -20",
+      "system_response": "Interceptado pelo Inquisidor Adversário V3 -> Contraexemplo injetado -> Blindado na Iteração 2",
+      "contained": true,
+      "duration_ms": 148.13,
+      "certificate_hash": "sha256:b6758f55a562f7ad4ca916f6b53524bda14d518ce8ab29b3269b7bfe0e4f51d4"
+    },
+    {
+      "id": "CHAOS-04",
+      "name": "Tentativa de Falsificação de Hash no ProvenancePointer",
+      "target_layer": "V3_RED_TEAM (Crypto Audit)",
+      "attack_vector": "ProvenancePointer com sha256:0000...deadbeef divergente do payload real",
+      "system_response": "Falsificação detectada em V3 -> Rollback Causal -> Hash autêntico exigido na Iteração 2",
+      "contained": true,
+      "duration_ms": 72.13,
+      "certificate_hash": "sha256:3d8872352dc9736d896b9abb0ce97f4c536809fb3d3fab9e244b6b5aaf5af250"
+    },
+    {
+      "id": "CHAOS-05",
+      "name": "Injeção de Paradoxo Insatisfatível (Prevenção de Deadlock & Alucinação Forçada)",
+      "target_layer": "Teto Bayesiano (T_max = 3)",
+      "attack_vector": "Invariante matematicamente impossível: x > 10 and x < 5",
+      "system_response": "Executou exatamente 3 iterações -> Emitiu EPISTEMIC_ABORT formal sem alucinar resposta falsa",
+      "contained": true,
+      "duration_ms": 112.55,
+      "certificate_hash": "sha256:86ce536eb23e507017724dfab39cdcd69e13d9abd6b89d3c58c2ee6adf9789bb"
+    },
+    {
+      "id": "CHAOS-06",
+      "name": "Orquestração Completa do Córtex em DAG (5 Neurônios Especialistas)",
+      "target_layer": "CORTEX_CONVERGENCE",
+      "attack_vector": "Propagação multi-onda topológica com verificação cruzada de 5 certificados",
+      "system_response": "5/5 Neurônios Aprovados (5/5 nós certificados)",
+      "contained": true,
+      "duration_ms": 25.72,
+      "certificate_hash": "evt_75f95cec8d4c472b"
+    },
+    {
+      "id": "CHAOS-07",
+      "name": "Ataque de Mutação SQL + Corrupção de Disco na Cadeia de Eventos",
+      "target_layer": "SQLite Triggers & SHA-256 Merkle Chain",
+      "attack_vector": "Tentativa de UPDATE/DELETE direto + adulteração binária de payload",
+      "system_response": "Triggers bloquearam UPDATE/DELETE; Auditoria SHA-256 detectou corrupção em evt_107f2855338749cb e restaurou integridade",
+      "contained": true,
+      "duration_ms": 15.89,
+      "certificate_hash": "sha256:10aa328c6d800970b896c3d78a74942622cdc4fbe6fdb56b7276fa3b8aa7d39b"
+    }
+  ]
+}
