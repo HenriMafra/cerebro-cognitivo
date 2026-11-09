@@ -1,5 +1,13 @@
-"""Pacote Core do Cérebro Cognitivo Fractal Multi-Agente."""
+"""Pacote Core do Cérebro Cognitivo Fractal Multi-Agente (v2.0)."""
 
+from .budget import (
+    BudgetExceededError,
+    GroundingLevel,
+    HardBudget,
+    MODEL_PRICING_TABLE,
+    ModelPricing,
+    VerificationProfile,
+)
 from .cortex import (
     ConvergenceSynthesisNeuron,
     CortexExecutionResult,
@@ -8,9 +16,18 @@ from .cortex import (
     FractalCognitiveCortex,
     SensoryInputNeuron,
 )
+from .crypto_signing import EventSigner, ExternalAnchor, HAS_ED25519
 from .event_store import EpistemicEventStore
+from .formal_z3 import (
+    ALLOWED_STDLIB_MODULES,
+    ASTPolicyViolation,
+    check_ast_allowlist,
+    detect_trivial_tests,
+    run_smtlib_formal_check,
+)
 from .llm_bridge import CognitiveSynthesisBridge, DeterministicSynthesisEngine
 from .neuron import CognitiveNeuron, InMemoryEventStore
+from .rag_memory import CoALAMemoryStore, KnowledgeChunk, normalize_for_literal_match
 from .schemas import (
     Claim,
     EpistemicEvent,
@@ -47,6 +64,27 @@ __all__ = [
     "compute_sha256",
     "new_id",
     "utc_now_iso",
+    # Crypto Signing & External Anchors
+    "EventSigner",
+    "ExternalAnchor",
+    "HAS_ED25519",
+    # Budget & Grounding Levels
+    "HardBudget",
+    "BudgetExceededError",
+    "VerificationProfile",
+    "GroundingLevel",
+    "ModelPricing",
+    "MODEL_PRICING_TABLE",
+    # AST Allowlist, Trivial Tests & Formal Z3
+    "ALLOWED_STDLIB_MODULES",
+    "ASTPolicyViolation",
+    "check_ast_allowlist",
+    "detect_trivial_tests",
+    "run_smtlib_formal_check",
+    # CoALA Memory & Literal Quote RAG
+    "CoALAMemoryStore",
+    "KnowledgeChunk",
+    "normalize_for_literal_match",
     # Event Store
     "EpistemicEventStore",
     "InMemoryEventStore",

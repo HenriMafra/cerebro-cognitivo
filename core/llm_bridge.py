@@ -291,15 +291,61 @@ class CognitiveSynthesisBridge:
         self,
         api_endpoint: str = "https://api.atria-asi.ai/v1/chat/completions",
         api_key: Optional[str] = None,
-        model: str = "atria-dawn-1",
-        timeout_sec: float = 3.0,
+        gemini_api_key: Optional[str] = None,
+        model: str = "gemini-2.5-flash",
+        timeout_sec: float = 8.0,
         deterministic_engine: Optional[DeterministicSynthesisEngine] = None,
     ) -> None:
         self.api_endpoint = api_endpoint
-        self.api_key = api_key or os.environ.get("ATRIA_API_KEY") or os.environ.get("OPENAI_API_KEY")
+        self.gemini_api_key = gemini_api_key or os.environ.get("GEMINI_API_KEY")
+        self.api_key = (
+            api_key
+            or self.gemini_api_key
+            or os.environ.get("ATRIA_API_KEY")
+            or os.environ.get("OPENAI_API_KEY")
+        )
         self.model = model
         self.timeout_sec = timeout_sec
         self.deterministic_engine = deterministic_engine or DeterministicSynthesisEngine()
+
+    def call_gemini_json(
+        self,
+        system_instruction: str,
+        user_prompt: str,
+        model: Optional[str] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Conector nativo para Google Gemini API (v1beta generateContent com JSON estruturado).
+        Permite heterogeneidade real de famílias de modelos sem depender de SDK externo.
+        """
+        key = self.gemini_api_key or self.api_key
+        if not key:
+            return None
+        target_model = model or (self.model if "gemini" in self.model else "gemini-2.5-flash")
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{target_model}:generateContent?key={key}"
+        payload = {
+            "systemInstruction": {"parts": [{"text": system_instruction}]},
+            "contents": [{"role": "user", "parts": [{"text": user_prompt}]}],
+            "generationConfig": {
+                "temperature": 0.1,
+                "responseMimeType": "application/json",
+            },
+        }
+        try:
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(payload).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=self.timeout_sec) as resp:
+                if resp.status == 200:
+                    data = json.loads(resp.read().decode("utf-8"))
+                    text = data["candidates"][0]["content"]["parts"][0]["text"]
+                    return json.loads(text)
+        except Exception:
+            return None
+        return None
 
     def synthesize(
         self,
