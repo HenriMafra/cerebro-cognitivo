@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cérebro Cognitivo Fractal Multi-Agente · Especificação Arquitetural Canônica</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg-primary: #07090e;
+      --bg-surface: #0d121f;
+      --bg-surface-elevated: #141c2e;
+      --bg-glass: rgba(13, 18, 31, 0.75);
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-bright: rgba(56, 189, 248, 0.3);
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --cyan: #06b6d4;
+      --cyan-glow: rgba(6, 182, 212, 0.25);
+      --violet: #8b5cf6;
+      --violet-glow: rgba(139, 92, 246, 0.25);
+      --emerald: #10b981;
+      --amber: #f59e0b;
+      --rose: #f43f5e;
+      --accent-grad: linear-gradient(135deg, #38bdf8 0%, #818cf8 50%, #c084fc 100%);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    html {
+      scroll-behavior: smooth;
+      background: var(--bg-primary);
+      color: var(--text-main);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      line-height: 1.65;
+      font-size: 15px;
+    }
+
+    body {
+      background: radial-gradient(circle at 50% 0%, #151e36 0%, #07090e 60%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Print Optimizations */
+    @media print {
+      body {
+        background: #fff !important;
+        color: #000 !important;
+      }
+      .no-print, nav, .btn-print { display: none !important; }
+      .container { max-width: 100% !important; margin: 0 !important; padding: 0 !important; }
+      .card, .diagram-box, pre {
+        background: #f8fafc !important;
+        border: 1px solid #cbd5e1 !important;
+        color: #0f172a !important;
+        page-break-inside: avoid;
+        box-shadow: none !important;
+      }
+      h1, h2, h3 { color: #0f172a !important; }
+      .badge, .metric-pill { border: 1px solid #94a3b8 !important; }
+    }
+
+    /* Header & Navigation */
+    header {
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--bg-glass);
+      backdrop-filter: blur(16px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      padding: 1rem 2rem;
+    }
+    .header-inner {
+      max-width: 1300px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .logo-area {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+    }
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: var(--accent-grad);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      color: #000;
+      box-shadow: 0 0 20px rgba(56, 189, 248, 0.4);
+    }
+    .logo-text {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.25rem 0.65rem;
+      border-radius: 9999px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .badge-cyan { background: rgba(6, 182, 212, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
+    .badge-emerald { background: rgba(16, 185, 129, 0.12); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.3); }
+    .badge-violet { background: rgba(139, 92, 246, 0.12); color: #a78bfa; border: 1px solid rgba(167, 139, 250, 0.3); }
+    .badge-amber { background: rgba(245, 158, 11, 0.12); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); }
+
+    .btn-print {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--bg-surface-elevated);
+      color: var(--text-main);
+      border: 1px solid var(--border-bright);
+      padding: 0.5rem 1.15rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .btn-print:hover {
+      background: #1e293b;
+      border-color: #38bdf8;
+      box-shadow: 0 0 15px rgba(56, 189, 248, 0.3);
+      transform: translateY(-1px);
+    }
+
+    /* Main Container */
+    .container {
+      max-width: 1200px;
+      margin: 2.5rem auto 5rem auto;
+      padding: 0 1.5rem;
+    }
+
+    /* Hero Banner */
+    .hero {
+      padding: 3rem 2.5rem;
+      background: linear-gradient(180deg, rgba(20, 28, 46, 0.8) 0%, rgba(13, 18, 31, 0.4) 100%);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      margin-bottom: 3.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -100px;
+      right: -100px;
+      width: 350px;
+      height: 350px;
+      background: radial-gradient(circle, rgba(56, 189, 248, 0.15), transparent 70%);
+      pointer-events: none;
+    }
+    .hero-meta {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+    }
+    .hero h1 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 2.5rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 50%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero p.lead {
+      font-size: 1.15rem;
+      color: var(--text-muted);
+      max-width: 900px;
+      margin-bottom: 2rem;
+      line-height: 1.6;
+    }
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.25rem;
+    }
+    .metric-box {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 1.1rem 1.25rem;
+      display: flex;
+      flex-direction: column;
+    }
+    .metric-val {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #38bdf8;
+    }
+    .metric-label {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      font-weight: 500;
+      margin-top: 0.2rem;
+    }
+
+    /* Content Typography & Sections */
+    section {
+      margin-bottom: 4rem;
+    }
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.75rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .section-num {
+      font-family: 'Fira Code', monospace;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--cyan);
+      background: rgba(6, 182, 212, 0.1);
+      padding: 0.2rem 0.6rem;
+      border-radius: 6px;
+      border: 1px solid rgba(6, 182, 212, 0.25);
+    }
+    h2 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 1.65rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #fff;
+    }
+    h3 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #e2e8f0;
+      margin: 1.75rem 0 0.85rem 0;
+    }
+    p {
+      color: var(--text-muted);
+      margin-bottom: 1.25rem;
+      font-size: 1.02rem;
+    }
+
+    /* Callout & Axiom Boxes */
+    .axiom-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.25rem;
+      margin: 2rem 0;
+    }
+    .axiom-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-left: 4px solid var(--cyan);
+      border-radius: 12px;
+      padding: 1.5rem;
+      transition: all 0.2s ease;
+    }
+    .axiom-card:hover {
+      border-color: rgba(56, 189, 248, 0.4);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .axiom-card.emerald { border-left-color: var(--emerald); }
+    .axiom-card.violet { border-left-color: var(--violet); }
+    .axiom-card.amber { border-left-color: var(--amber); }
+
+    .axiom-title {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .axiom-desc {
+      font-size: 0.92rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+
+    /* Diagram Panels */
+    .diagram-panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 2rem;
+      margin: 2.25rem 0;
+      box-shadow: 0 12px 36px rgba(0,0,0,0.5);
+      position: relative;
+    }
+    .diagram-title-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .diagram-title {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .mermaid {
+      display: flex;
+      justify-content: center;
+      overflow-x: auto;
+      padding: 1rem 0;
+    }
+
+    /* Micro-agents Steps Table */
+    .table-container {
+      overflow-x: auto;
+      margin: 1.75rem 0;
+      border-radius: 12px;
+      border: 1px solid var(--border-subtle);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.95rem;
+      background: var(--bg-surface);
+    }
+    th {
+      background: #111827;
+      color: #e2e8f0;
+      font-weight: 600;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    td {
+      padding: 1.05rem 1.25rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      color: var(--text-muted);
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+    /* Code Blocks */
+    pre {
+      background: #090d16;
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      border-radius: 12px;
+      padding: 1.5rem;
+      overflow-x: auto;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.88rem;
+      line-height: 1.6;
+      color: #cbd5e1;
+      margin: 1.5rem 0;
+      box-shadow: inset 0 2px 8px rgba(0,0,0,0.5);
+    }
+    code {
+      font-family: 'Fira Code', monospace;
+      color: #38bdf8;
+      background: rgba(56, 189, 248, 0.1);
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.9em;
+    }
+    pre code {
+      background: none;
+      padding: 0;
+      color: inherit;
+    }
+
+    /* Lists */
+    ul, ol {
+      padding-left: 1.5rem;
+      margin-bottom: 1.5rem;
+      color: var(--text-muted);
+    }
+    li {
+      margin-bottom: 0.65rem;
+      line-height: 1.6;
+    }
+    li strong {
+      color: #f1f5f9;
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border-subtle);
+      padding: 2.5rem 2rem;
+      background: #04060a;
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 0.88rem;
+      margin-top: auto;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sticky Header -->
+  <header class="no-print">
+    <div class="header-inner">
+      <div class="logo-area">
+        <div class="logo-icon">Ψ</div>
+        <div>
+          <div class="logo-text">CÉREBRO COGNITIVO FRACTAL</div>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 1rem;">
+        <span class="badge badge-cyan">v1.0 Canonical Spec</span>
+        <button class="btn-print" onclick="window.print()">
+          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4H7v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+          Salvar como PDF / Imprimir
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Document Container -->
+  <main class="container">
+
+    <!-- Hero / Title Section -->
+    <div class="hero">
+      <div class="hero-meta">
+        <span class="badge badge-violet">Arquitetura de Sistemas Autônomos</span>
+        <span class="badge badge-emerald">Auditoria Formal</span>
+        <span class="badge badge-cyan">Event Sourcing</span>
+      </div>
+      <h1>Cérebro Cognitivo Fractal Multi-Agente</h1>
+      <p class="lead">
+        Especificação arquitetural de redes neurais cognitivas compostas, grafo acíclico direcionado de execução (DAG), 
+        gravação integral de estados causais e verificação severa em múltiplas camadas contra alucinação, amnésia e falhas epistêmicas.
+      </p>
+
+      <div class="metric-grid">
+        <div class="metric-box">
+          <span class="metric-val">100%</span>
+          <span class="metric-label">Rastreabilidade Epistêmica (Event Sourcing)</span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-val">3 Níveis</span>
+          <span class="metric-label">Auditoria Interna em cada Neurônio</span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-val">Grounding</span>
+          <span class="metric-label">Ancoragem em Máquinas e Compiladores Reais</span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-val">0%</span>
+          <span class="metric-label">Tolerância a Alucinação Sem Lastro</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- SEÇÃO 1: OS AXIOMAS -->
+    <section id="axiomas">
+      <div class="section-header">
+        <span class="section-num">01</span>
+        <h2>Filosofia e Axiomas Fundamentais</h2>
+      </div>
+      <p>
+        O modelo convencional de agentes baseia-se na sobrecarga de um único modelo de linguagem (LLM solitário) que atua simultaneamente como 
+        pensador, executor e avaliador. A teoria de sistemas críticos prova que esse paradigma é inevitavelmente suscetível a alucinações estatísticas, 
+        perda de foco por contexto saturado e viés de confirmação. A arquitetura aqui concebida estabelece quatro axiomas rígidos de projeto:
+      </p>
+
+      <div class="axiom-grid">
+        <div class="axiom-card">
+          <div class="axiom-title">
+            <span>⚖️</span> Incompetência Solitária
+          </div>
+          <div class="axiom-desc">
+            Nenhum LLM possui autoridade para aprovar ou validar sua própria inferência. O pensador nunca pode ser o juiz da sua própria solução.
+          </div>
+        </div>
+
+        <div class="axiom-card emerald">
+          <div class="axiom-title">
+            <span>📜</span> Imutabilidade Epistêmica
+          </div>
+          <div class="axiom-desc">
+            Não se grava apenas a entrega final. Cada hipótese, teste de ferramenta, erro de terminal e correção intermediária vira um evento auditável no tempo.
+          </div>
+        </div>
+
+        <div class="axiom-card violet">
+          <div class="axiom-title">
+            <span>⚙️</span> Ancoragem Determinística
+          </div>
+          <div class="axiom-desc">
+            Onde houver leis de código, matemática ou dados de banco, a máquina real (compilador, sandbox, AST, provador formal) é o árbitro soberano, jamais a intuição do modelo.
+          </div>
+        </div>
+
+        <div class="axiom-card amber">
+          <div class="axiom-title">
+            <span>🛡️</span> Contenção Local de Erro
+          </div>
+          <div class="axiom-desc">
+            Nenhum erro ou ambiguidade tem permissão de atravessar a barreira de um neurônio. A falha é purgada microscopicamente no nó de origem.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SEÇÃO 2: O NEURÔNIO COMPOSTO -->
+    <section id="neuronio-composto">
+      <div class="section-header">
+        <span class="section-num">02</span>
+        <h2>A Micro-Arquitetura: O "Neurônio Cognitivo Composto"</h2>
+      </div>
+      <p>
+        Na biologia, uma coluna do neocórtex não é uma célula isolada, mas um circuito integrado com interneurônios inibitórios que modulam 
+        e filtram sinais antes de disparar. No Cérebro Fractal, cada <strong>Neurônio</strong> é um cluster autônomo com papéis estritamente distribuídos:
+      </p>
+
+      <!-- DIAGRAMA 1: O NEURONIO COMPOSTO -->
+      <div class="diagram-panel">
+        <div class="diagram-title-bar">
+          <span class="diagram-title">
+            <span>🔬</span> Microcircuito Interno de um Único Neurônio Especialista
+          </span>
+          <span class="badge badge-cyan">Closed-Loop Verification</span>
+        </div>
+        <div class="mermaid">
+flowchart TD
+    subgraph Neuronio ["🧠 NEURÔNIO COGNITIVO COMPOSTO (Micro-Circuito Fechado)"]
+        style Neuronio fill:#0a0f1d,stroke:#38bdf8,stroke-width:2px,color:#f8fafc
+
+        IN["<b>1. Dendrito Receptor</b><br/>• Sanitização de dados<br/>• Validação estrita de esquema"] 
+        --> EXP["<b>2. Expansor de Premissas</b><br/>• Delimita restrições e escopo<br/>• Mapeia premissas não ditas"]
+
+        EXP --> THINK["<b>3. Núcleo Pensador</b><br/>• Formulação de hipóteses<br/>• Geração de soluções técnicas"]
+
+        THINK --> V1["<b>4. Verificador Nível 1: Lógica</b><br/><i>(Auditor Silogístico)</i><br/>Detecta falhas formais e saltos conceituais"]
+
+        V1 -->|Reprovado / Falha Lógica| REC1["Feedback de Correção Lógica"] --> THINK
+        V1 -->|Aprovado| V2["<b>5. Verificador Nível 2: Grounding</b><br/><i>(Ancoragem de Máquina)</i><br/>Executa em sandbox, testa compilação e tipos"]
+
+        V2 -->|Erro de Execução / Stack Trace| REC2["Injeção de Log da Máquina"] --> THINK
+        V2 -->|Aprovado| V3["<b>6. Verificador Nível 3: Red Team</b><br/><i>(Inquisidor Adversário)</i><br/>Busca contraexemplos e quebras de limite"]
+
+        V3 -->|Refutado| REC3["Injeção de Contraexemplo"] --> THINK
+        V3 -->|Aprovado em Todos| POL["<b>7. Lapidador de Saída</b><br/>Empacota com prova formal e pureza semântica"]
+
+        POL --> AX["<b>8. Axônio Emissor</b><br/>Emite sinal certificado e assinado"]
+    end
+
+    EXT["⚡ Sinal de Entrada Externo"] --> IN
+    AX --> OUT["⚡ Disparo Sináptico Certificado"]
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Agente Interno</th>
+              <th>Função Epistêmica</th>
+              <th>Mecanismo de Ação</th>
+              <th>Critério de Rejeição</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>1. Dendrito Receptor</strong></td>
+              <td>Porta de Entrada Sináptica</td>
+              <td>Parsing de Pydantic Schema e tipagem estrita de payload.</td>
+              <td>Payload malformado, tipos incompatíveis ou campos ausentes.</td>
+            </tr>
+            <tr>
+              <td><strong>2. Expansor de Premissas</strong></td>
+              <td>Mapeador de Limites</td>
+              <td>Extrai restrições físicas, temporais e conceituais do problema.</td>
+              <td>Premissas contraditórias ou escopo não delimitado.</td>
+            </tr>
+            <tr>
+              <td><strong>3. Núcleo Pensador</strong></td>
+              <td>Motor de Síntese & Hipóteses</td>
+              <td>Formula caminhos de resolução, código e planos de execução.</td>
+              <td>Não se auto-avalia; submete tudo à bancada de teste.</td>
+            </tr>
+            <tr>
+              <td><strong>4. Verificador Lógico (V1)</strong></td>
+              <td>Auditor Semântico e Formal</td>
+              <td>Verifica silogismos, congruência lógica e ausência de falácias.</td>
+              <td>Saltos indutivos injustificados ou contradições textuais.</td>
+            </tr>
+            <tr>
+              <td><strong>5. Verificador de Grounding (V2)</strong></td>
+              <td>Árbitro de Máquina Determinístico</td>
+              <td>Submete código a interpretadores, provadores formais e linters.</td>
+              <td>Exit code diferente de 0, falha de compilação ou violação de tipos.</td>
+            </tr>
+            <tr>
+              <td><strong>6. Red Team Inquisidor (V3)</strong></td>
+              <td>Adversário Cético</td>
+              <td>Gera casos de teste extremos, sobrecargas e ataques de borda.</td>
+              <td>Qualquer contraexemplo que quebre a hipótese inicial.</td>
+            </tr>
+            <tr>
+              <td><strong>7. Lapidador & Axônio</strong></td>
+              <td>Certificador e Emissor</td>
+              <td>Empacota o sinal puro com metadados de telemetria e hash.</td>
+              <td>Não emite se houver qualquer pendência nos verificadores.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SEÇÃO 3: O CÓRTEX GLOBAL -->
+    <section id="cortex-global">
+      <div class="section-header">
+        <span class="section-num">03</span>
+        <h2>A Macro-Arquitetura: O Córtex Global de Especialistas</h2>
+      </div>
+      <p>
+        A rede macro organiza esses neurônios compostos em domínios de especialidade, conectados por um 
+        <strong>Roteamento Dinâmico em Grafo Acíclico Dirigido (DAG)</strong>. O Neurônio de Entrada Sensorial atua como 
+        um compilador de planos, direcionando a ativação apenas aos centros nervosos pertinentes à missão:
+      </p>
+
+      <!-- DIAGRAMA 2: O CÓRTEX MACRO -->
+      <div class="diagram-panel">
+        <div class="diagram-title-bar">
+          <span class="diagram-title">
+            <span>🌐</span> Topologia do Córtex Global e Canais de Validação Mútua
+          </span>
+          <span class="badge badge-violet">DAG Dynamic Routing</span>
+        </div>
+        <div class="mermaid">
+flowchart TD
+    User(["👤 Estímulo do Usuário / Prompt Externo"]) --> N_Sensorial["🧠 NEURÔNIO DE ENTRADA SENSORIAL<br/>• Normalização de Linguagem Natural<br/>• Compilação do Grafo de Tarefas (DAG)<br/>• Despacho de Sinais Sinápticos"]
+
+    subgraph Cortex ["🌐 CÓRTEX DE NEURÔNIOS ESPECIALISTAS (Processamento Paralelo)"]
+        style Cortex fill:#020617,stroke:#475569,stroke-dasharray: 4 4,color:#cbd5e1
+
+        N_Logica["🧠 Neurônio de Lógica & Matemática<br/><i>(Álgebra, provas, restrições e teoremas)</i>"]
+        N_Engenharia["🧠 Neurônio de Engenharia & Código<br/><i>(Arquitetura de software, bancos e algoritmos)</i>"]
+        N_Estrategia["🧠 Neurônio de Planejamento & Riscos<br/><i>(Caminho crítico, contingências e prioridades)</i>"]
+        N_Empirico["🧠 Neurônio Epistêmico & Fatos<br/><i>(Grounding em fontes primárias e dados brutos)</i>"]
+        N_Semantica["🧠 Neurônio Linguístico & Didática<br/><i>(Comunicação cirúrgica e clareza conceitual)</i>"]
+    end
+
+    N_Sensorial -->|Subtarefas Exatas| N_Logica
+    N_Sensorial -->|Subtarefas de Construção| N_Engenharia
+    N_Sensorial -->|Subtarefas de Gestão| N_Estrategia
+    N_Sensorial -->|Subtarefas Factuais| N_Empirico
+
+    N_Logica <-->|Validação Mútua: Prova vs Código| N_Engenharia
+    N_Estrategia <-->|Validação Mútua: Riscos vs Evidências| N_Empirico
+    N_Engenharia <-->|Especificação Técnica| N_Semantica
+
+    N_Logica --> N_Convergencia
+    N_Engenharia --> N_Convergencia
+    N_Estrategia --> N_Convergencia
+    N_Empirico --> N_Convergencia
+    N_Semantica --> N_Convergencia
+
+    N_Convergencia["🧠 NEURÔNIO DE CONVERGÊNCIA & SÍNTESE<br/>• Consolidação Holística de Resultados<br/>• Auditoria de Invariantes Globais<br/>• Emissão da Resposta Mestre Certificada"] --> Out(["✨ Execução Impecável / Entrega Certificada"])
+        </div>
+      </div>
+    </section>
+
+    <!-- SEÇÃO 4: EVENT SOURCING -->
+    <section id="event-sourcing">
+      <div class="section-header">
+        <span class="section-num">04</span>
+        <h2>O Mecanismo de Event Sourcing Epistêmico (Zero Amnésia)</h2>
+      </div>
+      <p>
+        Para atingir imunidade à amnésia e permitir auditoria cirúrgica de decisões, a rede descarta o armazenamento de "chat sessions".
+        O sistema é puramente <strong>Event-Sourced</strong>: cada ação, premissa e resultado de ferramenta é um registro atômico, imutável e assinado criptograficamente.
+      </p>
+
+      <!-- DIAGRAMA 3: EVENT SOURCING & ROLLBACK -->
+      <div class="diagram-panel">
+        <div class="diagram-title-bar">
+          <span class="diagram-title">
+            <span>⏳</span> Trajetória Causal em DAG e Time-Travel Rollback
+          </span>
+          <span class="badge badge-emerald">Append-Only Immutability</span>
+        </div>
+        <div class="mermaid">
+flowchart LR
+    E1["<b>Evento 01</b><br/>Recepção de Tarefa<br/><i>Estado inicial</i>"] --> E2["<b>Evento 02</b><br/>Hipótese Inicial (H1)<br/><i>Neurônio Engenharia</i>"]
+    E2 --> E3["<b>Evento 03</b><br/>Execução em Sandbox<br/><i>Exit Code: 1 (Erro)</i>"]
+    E3 --> E4["<b>Evento 04</b><br/>Detecção de Falha<br/><i>V2 rejeita H1</i>"]
+    
+    E4 -.->|Rollback Causal / Fork| E2
+    E4 --> E5["<b>Evento 05 (Fork)</b><br/>Hipótese Corrigida (H2)<br/><i>Injeção de Stack Trace</i>"]
+    E5 --> E6["<b>Evento 06</b><br/>Re-execução Sandbox<br/><i>Exit Code: 0 (Sucesso)</i>"]
+    E6 --> E7["<b>Evento 07</b><br/>Aprovação Red Team<br/><i>Certificado emitido</i>"]
+        </div>
+      </div>
+
+      <h3>Estrutura Canônica de um Evento Epistêmico (JSON Schema)</h3>
+      <pre><code>{
+  "event_id": "evt_9b81f2c0-84a1-43e8-912b-31d7465e9001",
+  "parent_event_id": "evt_7f8c9b2a-11e4-4d89-9a2e-4b61928a3014",
+  "timestamp_utc": "2026-11-09T20:58:32.412Z",
+  "neuron_id": "neuron_systems_engineering",
+  "subagent_role": "internal_verifier_level_2",
+  "cycle_iteration": 2,
+  "epistemic_state": {
+    "premises_held": [
+      "A porta 5432 do PostgreSQL deve estar exposta apenas na rede interna",
+      "O pooler de conexões deve suportar pelo menos 200 conexões concorrentes"
+    ],
+    "hypothesis_tested": "Configurar pgBouncer em modo transação para minimizar footprint de RAM",
+    "action_executed": {
+      "tool": "docker_sandbox_exec",
+      "command": "pgbouncer --version && psql -h 127.0.0.1 -p 6432 -U test_user -c 'SHOW POOLS;'"
+    },
+    "raw_machine_feedback": {
+      "exit_code": 0,
+      "stdout": "database | user | cl_active | cl_waiting | sv_active | sv_idle\npostgres | test_user | 12 | 0 | 4 | 8",
+      "stderr": ""
+    },
+    "verdict": "PASSED_DETERMINISTIC_GROUNDING",
+    "confidence_score": 0.998
+  },
+  "delta_changes": {
+    "files_written": ["/etc/pgbouncer/pgbouncer.ini"],
+    "state_mutations": {"db_connection_pool_mode": "transaction"}
+  },
+  "content_hash": "sha256:4b227777d4dd1fc61c6f884f48641d02b4d121d3fd328cb08b5531fcacdabf8a"
+}</code></pre>
+    </section>
+
+    <!-- SEÇÃO 5: ENGENHARIA ANTI-FALHAS -->
+    <section id="anti-falhas">
+      <div class="section-header">
+        <span class="section-num">05</span>
+        <h2>Engenharia de Contenção dos Três Grandes Males</h2>
+      </div>
+
+      <div class="axiom-grid">
+        <div class="axiom-card">
+          <div class="axiom-title">🚫 Alucinação Factual</div>
+          <div class="axiom-desc">
+            <strong>Solução: Lastro Obrigatório (Provenance Pointers).</strong> Toda afirmação deve carregar um ponteiro obrigatório de verificação: ou é uma dedução formal com prova simbólica, ou um dado de máquina com hash de execução, ou um axioma imposto pelo usuário. Afirmações sem lastro são sumariamente descartadas na camada V3.
+          </div>
+        </div>
+
+        <div class="axiom-card violet">
+          <div class="axiom-title">👥 Falha de Modo Comum</div>
+          <div class="axiom-desc">
+            <strong>Solução: Heterogeneidade de Modelos.</strong> Agentes de famílias diferentes são acoplados no mesmo neurônio (ex: Claude Pro no Pensador, Gemini na Lógica, provador Z3 no Grounding). Modelos diferentes possuem distribuições estatísticas distintas, impedindo a conivência no mesmo erro.
+          </div>
+        </div>
+
+        <div class="axiom-card amber">
+          <div class="axiom-title">♾️ Deadlock & Custo Exponencial</div>
+          <div class="axiom-desc">
+            <strong>Solução: Limiar de Decaimento e Teto de 3 Iterações.</strong> Cada neurônio possui no máximo 3 tentativas internas de convergência. A cada rejeição, o espaço de busca é reduzido em 50% via restrições negativas forçadas. Se falhar na 3ª, emite-se relatório formal de insuficiência matemática.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SEÇÃO 6: STACK DE IMPLEMENTAÇÃO -->
+    <section id="stack-tecnica">
+      <div class="section-header">
+        <span class="section-num">06</span>
+        <h2>Pilha Tecnológica para Construção Imediata</h2>
+      </div>
+      <p>
+        Esta arquitetura não depende de tecnologias hipotéticas. Ela é plenamente implementável hoje através da seguinte pilha de engenharia de software:
+      </p>
+
+      <!-- DIAGRAMA 4: STACK TÉCNICA -->
+      <div class="diagram-panel">
+        <div class="diagram-title-bar">
+          <span class="diagram-title">
+            <span>⚙️</span> Pilha de Engenharia e Tecnologias de Suporte
+          </span>
+          <span class="badge badge-cyan">Production-Ready Stack</span>
+        </div>
+        <div class="mermaid">
+flowchart LR
+    subgraph Storage ["Camada de Persistência Imutável"]
+        ES[("SQLite (Modo WAL)<br/>ou ClickHouse / PostgreSQL<br/>(Tabela Append-Only de Eventos)")]
+    end
+
+    subgraph StateMachine ["Motor de Orquestração & Tipagem"]
+        LG["LangGraph / Temporal.io<br/>(Máquina de Estados em Grafo Assíncrona)"]
+        PYD["Pydantic V2<br/>(Contratos de Mensagens Estritamente Tipadas)"]
+    end
+
+    subgraph ExecutionPlane ["Bancada de Grounding Determinístico"]
+        SB["Docker Sandboxes / MicroVMs<br/>(Execução Real de Código e Shell)"]
+        Z3["Z3 SMT Solver & AST Parsers<br/>(Validação Formal de Restrições Lógicas)"]
+    end
+
+    LG <--> PYD
+    LG --> ES
+    LG <--> ExecutionPlane
+        </div>
+      </div>
+
+      <ul>
+        <li><strong>Contratos de Mensagem</strong>: <code>Pydantic V2</code> com validação em tempo de execução para todos os payloads trocados entre axônios e dendritos.</li>
+        <li><strong>Máquina de Estados em Grafo</strong>: <code>LangGraph</code> ou <code>Temporal.io</code> para orquestração distribuída e tolerante a falhas.</li>
+        <li><strong>Persistência de Eventos</strong>: <code>SQLite</code> em modo WAL (Write-Ahead Logging) ou <code>PostgreSQL/ClickHouse</code> para inserções de alta velocidade sem mutação.</li>
+        <li><strong>Bancada de Sandbox</strong>: <code>Docker / Firecracker MicroVMs</code> com limites de memória, tempo de CPU e isolamento de rede para execução segura de código gerado.</li>
+      </ul>
+    </section>
+
+    <!-- SEÇÃO 7: ORDENS DE MISSÃO -->
+    <section id="diretrizes-subagentes">
+      <div class="section-header">
+        <span class="section-num">07</span>
+        <h2>Diretrizes de Missão para os Subagentes de Engenharia</h2>
+      </div>
+      <p>
+        Quando o sistema orquestrar subagentes para codificar e validar este cérebro em bancada de teste, as seguintes ordens de trabalho deverão ser cumpridas:
+      </p>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Subagente Designado</th>
+              <th>Missão Crítica</th>
+              <th>Entregável Obrigatório</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Subagente 1: Pesquisa & Literatura</strong></td>
+              <td>Mapear formalizações científicas de <em>Reflexion</em>, <em>Self-Refine</em> e <em>Multi-Agent Debate</em>.</td>
+              <td>Relatório de métricas de convergência e tolerância estatística de erro.</td>
+            </tr>
+            <tr>
+              <td><strong>Subagente 2: Schemas & Tipagem</strong></td>
+              <td>Programar os modelos de dados <code>Pydantic V2</code> para o Event Store e mensagens sinápticas.</td>
+              <td>Módulo Python <code>models.py</code> com validações estritas de esquema e hashes.</td>
+            </tr>
+            <tr>
+              <td><strong>Subagente 3: Grounding & Sandboxing</strong></td>
+              <td>Construir o verificador de Nível 2 acoplado ao interpretador de código e análise estática (AST).</td>
+              <td>Módulo Python <code>grounding_engine.py</code> com execução isolada e captura de erros.</td>
+            </tr>
+            <tr>
+              <td><strong>Subagente 4: Engenharia de Caos (Red Team)</strong></td>
+              <td>Desenvolver bateria de testes adversários para forçar falhas lógicas e verificar a contenção.</td>
+              <td>Módulo de teste <code>chaos_test.py</code> provando taxa de 100% de bloqueio de alucinações.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <div style="max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <strong>Cérebro Cognitivo Fractal Multi-Agente</strong> · Especificação Canônica v1.0
+      </div>
+      <div>
+        Projetado para Auditoria Epistêmica Total e Ancoragem Determinística
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Inicialização do Mermaid com tema escuro personalizado
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: '#090d16',
+        primaryColor: '#1e293b',
+        primaryTextColor: '#f8fafc',
+        primaryBorderColor: '#38bdf8',
+        lineColor: '#64748b',
+        secondaryColor: '#0f172a',
+        tertiaryColor: '#1e1b4b',
+        fontSize: '13px',
+        fontFamily: 'Inter, system-ui, sans-serif'
+      }
+    });
+  </script>
+</body>
+</html>
