@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cérebro Cognitivo Fractal · Inspetor de Telemetria e Auditoria Epistêmica</title>
+  <!-- Mermaid.js para renderização de grafos causais -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg-dark: #070a13;
+      --card-bg: #0f172a;
+      --card-border: #1e293b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent-cyan: #38bdf8;
+      --accent-emerald: #10b981;
+      --accent-rose: #f43f5e;
+      --accent-amber: #f59e0b;
+      --accent-violet: #818cf8;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      line-height: 1.5;
+      padding: 1.5rem 2rem;
+      min-height: 100vh;
+    }
+
+    /* Top Bar Header */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--card-border);
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .brand-title {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .brand-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, #0284c7, #6366f1);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+    }
+
+    .brand-text h1 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-text p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .status-pills {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.35rem 0.85rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    .pill-verified {
+      background-color: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+
+    .pill-corrupted {
+      background-color: rgba(244, 63, 94, 0.15);
+      color: #fb7185;
+      border: 1px solid rgba(244, 63, 94, 0.4);
+    }
+
+    .pill-branches {
+      background-color: rgba(99, 102, 241, 0.15);
+      color: #a5b4fc;
+      border: 1px solid rgba(99, 102, 241, 0.4);
+    }
+
+    /* Metrics Grid */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 2rem;
+    }
+
+    .metric-card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    }
+
+    .metric-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: var(--accent-cyan);
+    }
+
+    .metric-card.emerald::before { background: var(--accent-emerald); }
+    .metric-card.amber::before { background: var(--accent-amber); }
+    .metric-card.rose::before { background: var(--accent-rose); }
+
+    .metric-title {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.4rem;
+    }
+
+    .metric-value {
+      font-size: 1.9rem;
+      font-weight: 800;
+      color: var(--text-main);
+      display: flex;
+      align-items: baseline;
+      gap: 0.5rem;
+    }
+
+    .metric-subtext {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+
+    /* Panels & Containers */
+    .panel {
+      background-color: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .panel-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* Mermaid Graph View */
+    .mermaid-container {
+      background-color: #030712;
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 1rem;
+      overflow-x: auto;
+      min-height: 280px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* Forensic Table */
+    .filter-bar {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .filter-input, .filter-select {
+      background-color: #030712;
+      border: 1px solid var(--card-border);
+      color: var(--text-main);
+      padding: 0.5rem 0.85rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .filter-input:focus, .filter-select:focus {
+      border-color: var(--accent-cyan);
+    }
+
+    .filter-input {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .table-responsive {
+      overflow-x: auto;
+    }
+
+    table.forensic-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+      text-align: left;
+    }
+
+    table.forensic-table th {
+      background-color: #030712;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.7rem;
+      letter-spacing: 0.05em;
+      padding: 0.75rem 0.6rem;
+      border-bottom: 1px solid var(--card-border);
+      position: sticky;
+      top: 0;
+    }
+
+    table.forensic-table td {
+      padding: 0.75rem 0.6rem;
+      border-bottom: 1px solid #1e293b66;
+      vertical-align: middle;
+    }
+
+    table.forensic-table tr:hover td {
+      background-color: rgba(56, 189, 248, 0.04);
+    }
+
+    .mono {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+    }
+
+    .hash-badge {
+      background-color: #030712;
+      padding: 0.2rem 0.4rem;
+      border-radius: 4px;
+      border: 1px solid #334155;
+      color: #93c5fd;
+      cursor: pointer;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .badge-approved {
+      background-color: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+
+    .badge-rejected {
+      background-color: rgba(244, 63, 94, 0.2);
+      color: #fb7185;
+      border: 1px solid rgba(244, 63, 94, 0.4);
+    }
+
+    .badge-rollback {
+      background-color: rgba(245, 158, 11, 0.2);
+      color: #fcd34d;
+      border: 1px solid rgba(245, 158, 11, 0.4);
+    }
+
+    .badge-branch {
+      background-color: rgba(129, 140, 248, 0.2);
+      color: #c7d2fe;
+      border: 1px solid rgba(129, 140, 248, 0.4);
+    }
+
+    .btn-inspect {
+      background-color: #1e293b;
+      border: 1px solid #334155;
+      color: #38bdf8;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn-inspect:hover {
+      background-color: #38bdf8;
+      color: #020617;
+    }
+
+    /* Chaos Engineering Cards */
+    .chaos-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .chaos-card {
+      background-color: #030712;
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 1.2rem;
+      position: relative;
+    }
+
+    .chaos-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 0.6rem;
+    }
+
+    .chaos-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #f1f5f9;
+    }
+
+    .chaos-layer {
+      font-size: 0.7rem;
+      color: var(--accent-violet);
+      font-weight: 600;
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+    }
+
+    .chaos-desc {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+    }
+
+    .chaos-defense {
+      font-size: 0.78rem;
+      background-color: rgba(16, 185, 129, 0.08);
+      border-left: 3px solid var(--accent-emerald);
+      padding: 0.5rem 0.75rem;
+      border-radius: 0 4px 4px 0;
+      color: #a7f3d0;
+    }
+
+    /* Modal */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: rgba(0, 0, 0, 0.75);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem;
+    }
+
+    .modal-box {
+      background-color: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      width: 100%;
+      max-width: 800px;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .modal-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--accent-cyan);
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+
+    .modal-body {
+      padding: 1.5rem;
+      overflow-y: auto;
+    }
+
+    pre.json-view {
+      background-color: #030712;
+      border: 1px solid var(--card-border);
+      padding: 1rem;
+      border-radius: 6px;
+      color: #f1f5f9;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    footer {
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--card-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Bar -->
+  <header>
+    <div class="brand-title">
+      <div class="brand-icon">🌐</div>
+      <div class="brand-text">
+        <h1>Cérebro Cognitivo Fractal · Inspetor de Telemetria</h1>
+        <p>Auditoria Epistêmica Total, Merkle-DAG Causal e Grounding Determinístico em Tempo Real</p>
+      </div>
+    </div>
+    <div class="status-pills">
+      <span class="pill pill-verified">
+        🛡️ SHA-256 100% VERIFIED
+      </span>
+      <span class="pill pill-branches">
+        🌿 1 BRANCH ATIVA
+      </span>
+    </div>
+  </header>
+
+  <!-- Metrics Grid -->
+  <section class="metrics-grid">
+    <div class="metric-card">
+      <div class="metric-title">Total de Eventos no Event Store</div>
+      <div class="metric-value">37</div>
+      <div class="metric-subtext">Vértices imutáveis registrados no SQLite WAL</div>
+    </div>
+
+    <div class="metric-card emerald">
+      <div class="metric-title">Integridade da Cadeia SHA-256</div>
+      <div class="metric-value">100%</div>
+      <div class="metric-subtext">0 violações forenses detectadas</div>
+    </div>
+
+    <div class="metric-card emerald">
+      <div class="metric-title">Taxa de Contenção de Alucinações / Caos</div>
+      <div class="metric-value">100.0%</div>
+      <div class="metric-subtext">5/5 ataques adversários bloqueados com sucesso</div>
+    </div>
+
+    <div class="metric-card amber">
+      <div class="metric-title">Rollbacks Causais Executados</div>
+      <div class="metric-value">0</div>
+      <div class="metric-subtext">Reversões branch_from com restrições negativas</div>
+    </div>
+  </section>
+
+  <!-- Visual DAG Panel -->
+  <section class="panel">
+    <div class="panel-header">
+      <div class="panel-title">
+        <span>⏳</span> Grafo Causal da Linha do Tempo (DAG dos Últimos Eventos)
+      </div>
+      <span class="pill pill-branches">Topologia Dinâmica de Execução</span>
+    </div>
+    <div class="mermaid-container">
+      <div class="mermaid">
+flowchart TD
+    classDef approved fill:#064e3b,stroke:#10b981,stroke-width:2px,color:#ecfdf5;
+    classDef pending fill:#1e1b4b,stroke:#818cf8,stroke-width:2px,color:#e0e7ff;
+    classDef rejected fill:#4c0519,stroke:#f43f5e,stroke-width:2px,color:#ffe4e6;
+    classDef rollback fill:#451a03,stroke:#f59e0b,stroke-width:2px,color:#fef3c7;
+    classDef sensory fill:#0c4a6e,stroke:#38bdf8,stroke-width:2px,color:#f0f9ff;
+    evt_79b174b8b9db41fd["AXON_EMITTED<br/><small>neuron_epistemic_facts (main)</small><br/><b>APPROVED</b>"]
+    class evt_79b174b8b9db41fd approved;
+    evt_1614dab69d94430c["SIGNAL_RECEIVED<br/><small>neuron_logic_math (main)</small><br/><b>ACCEPTED</b>"]
+    class evt_1614dab69d94430c sensory;
+    evt_a2653c6d472d499a["PREMISES_EXPANDED<br/><small>neuron_logic_math (main)</small><br/><b>PREMISES_EXPANDED</b>"]
+    class evt_a2653c6d472d499a pending;
+    evt_4744b8df18314c33["HYPOTHESIS_GENERATED<br/><small>neuron_logic_math (main)</small><br/><b>HYPOTHESIS_FORMULATED</b>"]
+    class evt_4744b8df18314c33 pending;
+    evt_4719b56535cc4ed5["VERIFICATION_V1<br/><small>neuron_logic_math (main)</small><br/><b>APPROVED</b>"]
+    class evt_4719b56535cc4ed5 approved;
+    evt_90485c624b374480["VERIFICATION_V2<br/><small>neuron_logic_math (main)</small><br/><b>APPROVED</b>"]
+    class evt_90485c624b374480 approved;
+    evt_e6127b3846fc4b5d["VERIFICATION_V3<br/><small>neuron_logic_math (main)</small><br/><b>APPROVED</b>"]
+    class evt_e6127b3846fc4b5d approved;
+    evt_fb40d3d94c1f4a91["AXON_EMITTED<br/><small>neuron_logic_math (main)</small><br/><b>APPROVED</b>"]
+    class evt_fb40d3d94c1f4a91 approved;
+    evt_d8d2332faaf1485b["SIGNAL_RECEIVED<br/><small>neuron_systems_engineering (main)</small><br/><b>ACCEPTED</b>"]
+    class evt_d8d2332faaf1485b sensory;
+    evt_241d19cce389400d["PREMISES_EXPANDED<br/><small>neuron_systems_engineering (main)</small><br/><b>PREMISES_EXPANDED</b>"]
+    class evt_241d19cce389400d pending;
+    evt_3790c59500744e72["HYPOTHESIS_GENERATED<br/><small>neuron_systems_engineering (main)</small><br/><b>HYPOTHESIS_FORMULATED</b>"]
+    class evt_3790c59500744e72 pending;
+    evt_acdca87f2dc34b93["VERIFICATION_V1<br/><small>neuron_systems_engineering (main)</small><br/><b>APPROVED</b>"]
+    class evt_acdca87f2dc34b93 approved;
+    evt_a00e042369f44ec2["VERIFICATION_V2<br/><small>neuron_systems_engineering (main)</small><br/><b>APPROVED</b>"]
+    class evt_a00e042369f44ec2 approved;
+    evt_c5ff570776a34d7f["VERIFICATION_V3<br/><small>neuron_systems_engineering (main)</small><br/><b>APPROVED</b>"]
+    class evt_c5ff570776a34d7f approved;
+    evt_9c9ef94ea84f44fc["AXON_EMITTED<br/><small>neuron_systems_engineering (main)</small><br/><b>APPROVED</b>"]
+    class evt_9c9ef94ea84f44fc approved;
+    evt_65c5f7c8f950437d["SIGNAL_RECEIVED<br/><small>neuron_strategy_risk (main)</small><br/><b>ACCEPTED</b>"]
+    class evt_65c5f7c8f950437d sensory;
+    evt_aed79a562c73481f["PREMISES_EXPANDED<br/><small>neuron_strategy_risk (main)</small><br/><b>PREMISES_EXPANDED</b>"]
+    class evt_aed79a562c73481f pending;
+    evt_68b3cd3c979743f6["HYPOTHESIS_GENERATED<br/><small>neuron_strategy_risk (main)</small><br/><b>HYPOTHESIS_FORMULATED</b>"]
+    class evt_68b3cd3c979743f6 pending;
+    evt_e43678384e574119["VERIFICATION_V1<br/><small>neuron_strategy_risk (main)</small><br/><b>APPROVED</b>"]
+    class evt_e43678384e574119 approved;
+    evt_93a4f4746e04470c["VERIFICATION_V2<br/><small>neuron_strategy_risk (main)</small><br/><b>APPROVED</b>"]
+    class evt_93a4f4746e04470c approved;
+    evt_b90c30f2568d4d1e["VERIFICATION_V3<br/><small>neuron_strategy_risk (main)</small><br/><b>APPROVED</b>"]
+    class evt_b90c30f2568d4d1e approved;
+    evt_bcf347b913f44330["AXON_EMITTED<br/><small>neuron_strategy_risk (main)</small><br/><b>APPROVED</b>"]
+    class evt_bcf347b913f44330 approved;
+    evt_9af4effb34ad443c["SIGNAL_RECEIVED<br/><small>neuron_semantics_didactics (main)</small><br/><b>ACCEPTED</b>"]
+    class evt_9af4effb34ad443c sensory;
+    evt_c96d997129104126["PREMISES_EXPANDED<br/><small>neuron_semantics_didactics (main)</small><br/><b>PREMISES_EXPANDED</b>"]
+    class evt_c96d997129104126 pending;
+    evt_40762a3b5fa04cf0["HYPOTHESIS_GENERATED<br/><small>neuron_semantics_didactics (main)</small><br/><b>HYPOTHESIS_FORMULATED</b>"]
+    class evt_40762a3b5fa04cf0 pending;
+    evt_821e408492d64e43["VERIFICATION_V1<br/><small>neuron_semantics_didactics (main)</small><br/><b>APPROVED</b>"]
+    class evt_821e408492d64e43 approved;
+    evt_f2530224d83d40d0["VERIFICATION_V2<br/><small>neuron_semantics_didactics (main)</small><br/><b>APPROVED</b>"]
+    class evt_f2530224d83d40d0 approved;
+    evt_cf98b6059d484e06["VERIFICATION_V3<br/><small>neuron_semantics_didactics (main)</small><br/><b>APPROVED</b>"]
+    class evt_cf98b6059d484e06 approved;
+    evt_851a9a2e7d2f44a1["AXON_EMITTED<br/><small>neuron_semantics_didactics (main)</small><br/><b>APPROVED</b>"]
+    class evt_851a9a2e7d2f44a1 approved;
+    evt_1c36f89c1cbf4ebf["CORTEX_CONVERGENCE<br/><small>neuron_convergence_synthesis (main)</small><br/><b>APPROVED</b>"]
+    class evt_1c36f89c1cbf4ebf approved;
+    evt_79b174b8b9db41fd --> evt_1614dab69d94430c
+    evt_1614dab69d94430c --> evt_a2653c6d472d499a
+    evt_a2653c6d472d499a --> evt_4744b8df18314c33
+    evt_4744b8df18314c33 --> evt_4719b56535cc4ed5
+    evt_4719b56535cc4ed5 --> evt_90485c624b374480
+    evt_90485c624b374480 --> evt_e6127b3846fc4b5d
+    evt_e6127b3846fc4b5d --> evt_fb40d3d94c1f4a91
+    evt_fb40d3d94c1f4a91 --> evt_d8d2332faaf1485b
+    evt_d8d2332faaf1485b --> evt_241d19cce389400d
+    evt_241d19cce389400d --> evt_3790c59500744e72
+    evt_3790c59500744e72 --> evt_acdca87f2dc34b93
+    evt_acdca87f2dc34b93 --> evt_a00e042369f44ec2
+    evt_a00e042369f44ec2 --> evt_c5ff570776a34d7f
+    evt_c5ff570776a34d7f --> evt_9c9ef94ea84f44fc
+    evt_9c9ef94ea84f44fc --> evt_65c5f7c8f950437d
+    evt_65c5f7c8f950437d --> evt_aed79a562c73481f
+    evt_aed79a562c73481f --> evt_68b3cd3c979743f6
+    evt_68b3cd3c979743f6 --> evt_e43678384e574119
+    evt_e43678384e574119 --> evt_93a4f4746e04470c
+    evt_93a4f4746e04470c --> evt_b90c30f2568d4d1e
+    evt_b90c30f2568d4d1e --> evt_bcf347b913f44330
+    evt_bcf347b913f44330 --> evt_9af4effb34ad443c
+    evt_9af4effb34ad443c --> evt_c96d997129104126
+    evt_c96d997129104126 --> evt_40762a3b5fa04cf0
+    evt_40762a3b5fa04cf0 --> evt_821e408492d64e43
+    evt_821e408492d64e43 --> evt_f2530224d83d40d0
+    evt_f2530224d83d40d0 --> evt_cf98b6059d484e06
+    evt_cf98b6059d484e06 --> evt_851a9a2e7d2f44a1
+    evt_851a9a2e7d2f44a1 --> evt_1c36f89c1cbf4ebf
+      </div>
+    </div>
+  </section>
+
+  <!-- Forensic Audit Table Panel -->
+  <section class="panel">
+    <div class="panel-header">
+      <div class="panel-title">
+        <span>📜</span> Tabela de Auditoria Forense de Eventos Epistêmicos
+      </div>
+      <div style="font-size: 0.8rem; color: var(--text-muted);">
+        Total listado: <span id="event-counter">37</span> eventos
+      </div>
+    </div>
+
+    <div class="filter-bar">
+      <input type="text" id="searchInput" class="filter-input" placeholder="🔍 Buscar por ID, Tipo, Neurônio ou Veredito..." onkeyup="filterEvents()">
+      <select id="branchSelect" class="filter-select" onchange="filterEvents()">
+        <option value="">Todas as Branches</option>
+        <option value="main">main</option>
+      </select>
+      <select id="verdictSelect" class="filter-select" onchange="filterEvents()">
+        <option value="">Todos os Vereditos</option>
+        <option value="APPROVED">APPROVED</option>
+        <option value="REJECTED">REJECTED (Qualquer)</option>
+        <option value="EPISTEMIC_FAILURE">EPISTEMIC_FAILURE</option>
+        <option value="CAUSAL_ROLLBACK">CAUSAL_ROLLBACK</option>
+      </select>
+    </div>
+
+    <div class="table-responsive">
+      <table class="forensic-table" id="forensicTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Event ID</th>
+            <th>Branch</th>
+            <th>Neurônio</th>
+            <th>Tipo de Evento</th>
+            <th>Veredito</th>
+            <th>Confiança</th>
+            <th>Hash Anterior</th>
+            <th>Content Hash</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="eventsTbody">
+          <!-- Linhas renderizadas via JavaScript interativo -->
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Chaos Engineering Report Panel -->
+  <section class="panel">
+    <div class="panel-header">
+      <div class="panel-title">
+        <span>💥</span> Relatório de Engenharia de Caos & Resiliência a Adversários (Red Team)
+      </div>
+      <span class="pill pill-verified">100% Contenção Comprovada</span>
+    </div>
+    <div class="chaos-grid">
+      
+      <div class="chaos-card">
+        <div class="chaos-header">
+          <div class="chaos-title">Alucinação sem Lastro Epistêmico</div>
+          <span class="badge badge-approved">CONTAINED</span>
+        </div>
+        <div class="chaos-layer">Defesa: V1 Lógica Silogística &amp; V3 Red Team</div>
+        <div class="chaos-desc">Injeção forçada de afirmações apodíticas sem ProvenancePointer ou com hashes inventados.</div>
+        <div class="chaos-defense">
+          <strong>Reação do Cérebro:</strong> Camadas V1 e V3 rejeitam sumariamente a hipótese (REJECTED_GROUNDING) e exigem lastro formal.
+        </div>
+      </div>
+      
+      <div class="chaos-card">
+        <div class="chaos-header">
+          <div class="chaos-title">Bug de Sintaxe e Exceção de Runtime</div>
+          <span class="badge badge-approved">CONTAINED</span>
+        </div>
+        <div class="chaos-layer">Defesa: V2 Árbitro de Máquina (Sandbox)</div>
+        <div class="chaos-desc">Geração proposital de código com parênteses desbalanceados, NameError e divisão por zero.</div>
+        <div class="chaos-defense">
+          <strong>Reação do Cérebro:</strong> Análise estática via AST e execução isolada capturam exit_code != 0, injetando o traceback como restrição negativa.
+        </div>
+      </div>
+      
+      <div class="chaos-card">
+        <div class="chaos-header">
+          <div class="chaos-title">Bug Sutil de Caso de Borda (Off-by-One)</div>
+          <span class="badge badge-approved">CONTAINED</span>
+        </div>
+        <div class="chaos-layer">Defesa: V3 Inquisidor Adversário (Red Team)</div>
+        <div class="chaos-desc">Código sintaticamente limpo que falha silenciosamente em entradas extremas (listas vazias, tipos nulos, inteiros gigantes).</div>
+        <div class="chaos-defense">
+          <strong>Reação do Cérebro:</strong> Red Team gera harness adversário direcionado e desqualifica a hipótese com contra-exemplos empíricos.
+        </div>
+      </div>
+      
+      <div class="chaos-card">
+        <div class="chaos-header">
+          <div class="chaos-title">Tentativa de Loop Infinito e Exaustão</div>
+          <span class="badge badge-approved">CONTAINED</span>
+        </div>
+        <div class="chaos-layer">Defesa: V2 Sandbox &amp; Limites do Córtex</div>
+        <div class="chaos-desc">Injeção de &#x27;while True&#x27; sem condição de parada visando exaurir memória e travar o loop reflexivo.</div>
+        <div class="chaos-defense">
+          <strong>Reação do Cérebro:</strong> Timeout determinístico em sandbox (2.0s) e teto rígido de iterações (max_iterations=3) com Aborto Epistêmico formal.
+        </div>
+      </div>
+      
+      <div class="chaos-card">
+        <div class="chaos-header">
+          <div class="chaos-title">Ataque de Adulteração Direta no SQLite (Bitflip)</div>
+          <span class="badge badge-approved">CONTAINED</span>
+        </div>
+        <div class="chaos-layer">Defesa: EpistemicEventStore (Triggers &amp; SHA-256)</div>
+        <div class="chaos-desc">Tentativa de adulterar ou excluir registros históricos diretamente via comando SQL UPDATE/DELETE.</div>
+        <div class="chaos-defense">
+          <strong>Reação do Cérebro:</strong> Triggers &#x27;prevent_event_update&#x27; e &#x27;prevent_event_delete&#x27; bloqueiam no banco; verify_chain_integrity detecta violação de hash.
+        </div>
+      </div>
+      
+    </div>
+  </section>
+
+  <!-- Modal de Inspeção JSON -->
+  <div class="modal-backdrop" id="inspectModal" onclick="closeModal(event)">
+    <div class="modal-box" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title" id="modalEventTitle">Detalhes Forenses do Evento</div>
+        <button class="modal-close" onclick="closeModalDirect()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <pre class="json-view" id="modalJsonContent"></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <div>
+      <strong>Cérebro Cognitivo Fractal</strong> · Inspetor de Telemetria v1.0
+    </div>
+    <div>
+      Persistência Imutável em SQLite WAL & Córtex Causal em DAG
+    </div>
+  </footer>
+
+  <!-- Scripts Interativos -->
+  <script>
+    // Inicialização do Mermaid
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: '#030712',
+        primaryColor: '#1e293b',
+        primaryTextColor: '#f8fafc',
+        primaryBorderColor: '#38bdf8',
+        lineColor: '#64748b',
+        fontSize: '12px',
+        fontFamily: 'Inter, system-ui, sans-serif'
+      }
+    });
+
+    // Dados crus dos eventos injetados em JSON seguro
+    const ALL_EVENTS = [{"event_id": "evt_f908304ff2bd4d15", "parent_event_id": null, "branch_id": "main", "neuron_id": "neuron_sensory_input", "subagent_role": "sensory_thalamus_compiler", "event_type": "DAG_COMPILED", "verdict": "APPROVED", "confidence_score": 1.0, "cycle_iteration": 1, "content_hash": "sha256:dcb176cdfd761f2d2e6ae59f42334a58ece415d10219f21b03f233a9bcb4f64c", "previous_event_hash": "GENESIS_BLOCK", "timestamp_utc": "2026-11-09T21:21:25.755240+00:00"}, {"event_id": "evt_51373cc442df458a", "parent_event_id": "evt_f908304ff2bd4d15", "branch_id": "main", "neuron_id": "neuron_epistemic_facts", "subagent_role": "DENDRITO_RECEPTOR", "event_type": "SIGNAL_RECEIVED", "verdict": "ACCEPTED", "confidence_score": 1.0, "cycle_iteration": 0, "content_hash": "sha256:ccc244a82c27cdc7e2d32d9a66a0b8ff6f85e90fb07188a5fb3d69d4a3c6ef19", "previous_event_hash": "sha256:dcb176cdfd761f2d2e6ae59f42334a58ece415d10219f21b03f233a9bcb4f64c", "timestamp_utc": "2026-11-09T21:21:25.755240+00:00"}, {"event_id": "evt_8f37e90986354743", "parent_event_id": "evt_51373cc442df458a", "branch_id": "main", "neuron_id": "neuron_epistemic_facts", "subagent_role": "EXPANSOR_PREMISSAS", "event_type": "PREMISES_EXPANDED", "verdict": "PREMISES_EXPANDED", "confidence_score": 1.0, "cycle_iteration": 0, "content_hash": "sha256:b9c1f7913993f020c75b0c488c63f85ae411ba7d995aa8b6059e0409205ed454", "previous_event_hash": "sha256:ccc244a82c27cdc7e2d32d9a66a0b8ff6f85e90fb07188a5fb3d69d4a3c6ef19", "timestamp_utc": "2026-11-09T21:21:25.755240+00:00"}, {"event_id": "evt_da2d129271a34e29", "parent_event_id": "evt_8f37e90986354743", "branch_id": "main", "neuron_id": "neuron_epistemic_facts", "subagent_role": "NUCLEO_PENSADOR", "event_type": "HYPOTHESIS_GENERATED", "verdict": "HYPOTHESIS_FORMULATED", "confidence_score": 0.5, "cycle_iteration": 1, "content_hash": "sha256:cf2d610667b9c7d4d3eca94592ac188763b0fec0721e274355d53be80108b434", "previous_event_hash": "sha256:b9c1f7913993f020c75b0c488c63f85ae411ba7d995aa8b6059e0409205ed454", "timestamp_utc": "2026-11-09T21:21:25.755240+00:00"}, {"event_id": "evt_31f133380ec0488f", "parent_event_id": "evt_da2d129271a34e29", "branch_id": "main", "neuron_id": "neuron_epistemic_facts", "subagent_role": "VERIFICADOR_V1_LOGICA", "event_type": "VERIFICATION_V1", "verdict": "APPROVED", "confidence_score": 1.0, "cycle_iteration": 1, "content_hash": "sha256:5d2def4d48f8d0a42a8a413aeca3bd999b7f7717ea2453e1210d32b2f73ca9dd", "previous_event_hash": "sha256:cf2d610667b9c7d4d3eca94592ac188763b0fec0721e274355d53be80108b434", "timestamp_utc": "2026-11-09T21:21:25.755240+00:00"}, {"event_id": "evt_66078ff644784c4d", "parent_event_id": "evt_31f133380ec0488f", "branch_id": "main", "neuron_id": "neuron_epistemic_facts", "subagent_role": "VERIFICADOR_V2_GROUNDING", "event_type": "VERIFICATION_V2", "verdict": "APPROVED", "confidence_score": 1.0, "cycle_iteration": 1, "content_hash": "sha256:0f92400d9a10d4a1f1a0949162719a831b6a826a51856ec521ed5117520e44de", "previous_event_hash": "sha256:5d2def4d48f8d0a42a8a413aeca3bd999b7f7717ea2453e1210d32b2f73ca9dd", "timestamp_utc": "2026-11-09T21:21:25.755240+00:00"}, {"event_id": "evt_6d95b98c88eb43c4", "parent_event_id": "evt_66078ff644784c4d", "branch_id": "main", "neuron_id": "neuron_epistemic_facts", "subagent_role": "VERIFICADOR_V3_RED_TEAM", "event_type": "VERIFICATION_V3", "verdict": "APPROVED", "confidence_score": 1.0, "cycle_iteration": 1, "content_hash": "sha256:dbf5abdc4bc45659f1513bc3f490d1ecd33ff80d51122482756a4970430b1ae1", "previous_event_hash": "sha256:0f92400d9a10d4a1f1a0949162719a831b6a826a51856ec521ed5117520e44de", "timestamp_utc": "2026-11-09T21:21:25.755240+00:00"}, {"event_id": "evt_79b174b8b9db41fd", "parent_event_id": "evt_6d95b98c88eb43c4", "branch_id": "main", "neuron_id": "neuron_epistemic_facts", "subagent_role": "AXONIO_EMISSOR", "event_type": "AXON_EMITTED", "verdict": "APPROVED", "confidence_score": 1.0, "cycle_iteration": 1, "content_hash": "sha256:b7838b947fcb277c7dda856b4a49f900fd84720502ff2f2a6acb9d61b48f3abc", "previous_event_hash": "sha256:dbf5abdc4bc45659f1513bc3f490d1ecd33ff80d51122482756a4970430b1ae1", "timestamp_utc": "2026-11-09T21:21:25.755240+00:00"}, {"event_id": "evt_1614dab69d94430c", "parent_event_id": "evt_79b174b8b9db41fd", "branch_id": "main", "neuron_id": "neuron_logic_math", "subagent_role": "DENDRITO_RECEPTOR", "event_type": "SIGNAL_RECEIVED", "verdict": "ACCEPTED", "confidence_score": 1.0, "cycle_iteration": 0, "content_hash": "sha256:ae23f572abcef4cefc9b004dea25d18a68dda329b3f0e2c26cd91da107f20d14", "previous_event_hash": "sha256:b7838b947fcb277c7dda856b4a49f900fd84720502ff2f2a6acb9d61b48f3abc", "timestamp_utc": "2026-11-09T21:21:25.755240+00:00"}, {"event_id": "evt_a2653c6d472d499a", "parent_event_id": "evt_1614dab69d94430c", "branch_id": "main", "neuron_id": "neuron_logic_math", "subagent_role": "EXPANSOR_PREMISSAS", "event_type": "PREMISES_EXPANDED", "verdict": "PREMISES_EXPANDED", "confidence_score": 1.0, "cycle_iteration": 0, "content_hash": "sha256:a116516748d0e39c168ef106777db8299e98c10590cd34bbf41b0cba4f66cbb2", "previous_event_hash": "sha256:ae23f572abcef4cefc9b004dea25d18a68dda329b3f0e2c26cd91da107f20d14", "timestamp_utc": "2026-11-09T21:21:25.755240+00:00"}, {"event_id": "evt_4744b8df18314c33", "parent_event_id": "evt_a2653c6d472d499a", "branch_id": "main", "neuron_id": "neuron_logic_math", "subagent_role": "NUCLEO_PENSADOR", "event_type": "HYPOTHESIS_GENERATED", "verdict": "HYPOTHESIS_FORMULATED", "confidence_score": 0.5, "cycle_iteration": 1, "content_hash": "sha256:d2fac2fa8e34cfe3b90c1d59783bf573ecb257c9d634f61eb21ace436560201b", "previous_event_hash": "sha256:a116516748d0e39c168ef106777db8299e98c10590cd34bbf41b0cba4f66cbb2", "timestamp_utc": "2026-11-09T21:21:25.755240+00:00"}, {"event_id": "evt_4719b56535cc4ed5", "parent_event_id": "evt_4744b8df18314c33", "branch_id": "main", "neuron_id": "neuron_logic_math", "subagent_role": "VERIFICADOR_V1_LOGICA", "event_type": "VERIFICATION_V1", "verdict": "APPROVED", "confidence_score": 1.0, "cycle_iteration": 1, "content_hash": "sha256:baeabbd608938f26e9eb58c9a5a2b5e9cea42ae6e3ca6b814b90a55025555978", "previous_event_hash": "sha256:d2fac2fa8e34cfe3b90c1d59783bf573ecb257c9d634f61eb21ace436560201b", "timestamp_utc": "2026-11-09T21:21:25.755240+00:00"}, {"event_id": "evt_90485c624b374480", "parent_event_id": "evt_4719b56535cc4ed5", "branch_id": "main", "neuron_id": "neuron_logic_math", "subagent_role": "VERIFICADOR_V2_GROUNDING", "event_type": "VERIFICATION_V2", "verdict": "APPROVED", "confidence_score": 1.0, "cycle_iteration": 1, "content_hash": "sha256:7c482807429be99fac584711da1dcf471e71e08e20fa8efc7dc8a5eb9a85db8d", "previous_event_hash": "sha256:baeabbd608938f26e9eb58c9a5a2b5e9cea42ae6e3ca6b814b90a55025555978", "timestamp_utc": "2026-11-09T21:21:25.755240+00:00"}, {"event_id": "evt_e6127b3846fc4b5d", "parent_event_id": "evt_90485c624b374480", "branch_id": "main", "neuron_id": "neuron_logic_math", "subagent_role": "VERIFICADOR_V3_RED_TEAM", "event_type": "VERIFICATION_V3", "verdict": "APPROVED", "confidence_score": 1.0, "cycle_iteration": 1, "content_hash": "sha256:a0ca55afbdd05bab7719076ba4d51a36268147c6414e15666325da5d3d17876e", "previous_event_hash": "sha256:7c482807429be99fac584711da1dcf471e71e08e20fa8efc7dc8a5eb9a85db8d", "timestamp_utc": "2026-11-09T21:21:25.755240+00:00"}, {"event_id": "evt_fb40d3d94c1f4a91", "parent_event_id": "evt_e6127b3846fc4b5d", "branch_id": "main", "neuron_id": "neuron_logic_math", "subagent_role": "AXONIO_EMISSOR", "event_type": "AXON_EMITTED", "verdict": "APPROVED", "confidence_score": 1.0, "cycle_iteration": 1, "content_hash": "sha256:dd3164b24d06e36f0d520e56ab4ad7741e9342953824c72acd610f114c094141", "previous_event_hash": "sha256:a0ca55afbdd05bab7719076ba4d51a36268147c6414e15666325da5d3d17876e", "timestamp_utc": "2026-11-09T21:21:25.755240+00:00"}, {"event_id": "evt_d8d2332faaf1485b", "parent_event_id": "evt_fb40d3d94c1f4a91", "branch_id": "main", "neuron_id": "neuron_systems_engineering", "subagent_role": "DENDRITO_RECEPTOR", "event_type": "SIGNAL_RECEIVED", "verdict": "ACCEPTED", "confidence_score": 1.0, "cycle_iteration": 0, "content_hash": "sha256:24ba1d611015ad315dba3de76f272f7399e3e601313f932bc9eda0886ba2df04", "previous_event_hash": "sha256:dd3164b24d06e36f0d520e56ab4ad7741e9342953824c72acd610f114c094141", "timestamp_utc": "2026-11-09T21:21:25.755240+00:00"}, {"event_id": "evt_241d19cce389400d", "parent_event_id": "evt_d8d2332faaf1485b", "branch_id": "main", "neuron_id": "neuron_systems_engineering", "subagent_role": "EXPANSOR_PREMISSAS", "event_type": "PREMISES_EXPANDED", "verdict": "PREMISES_EXPANDED", "confidence_score": 1.0, "cycle_iteration": 0, "content_hash": "sha256:be3e3f71355e3dc443f8338075ad48980c6367aab9a505a8c9c75d82be3724df", "previous_event_hash": "sha256:24ba1d611015ad315dba3de76f272f7399e3e601313f932bc9eda0886ba2df04", "timestamp_utc": "2026-11-09T21:21:25.755240+00:00"}, {"event_id": "evt_3790c59500744e72", "parent_event_id": "evt_241d19cce389400d", "branch_id": "main", "neuron_id": "neuron_systems_engineering", "subagent_role": "NUCLEO_PENSADOR", "event_type": "HYPOTHESIS_GENERATED", "verdict": "HYPOTHESIS_FORMULATED", "confidence_score": 0.5, "cycle_iteration": 1, "content_hash": "sha256:5b199c61dbbc7819c0df8838d921488b596ebc7a2d8e00562dba5be5f2ade06d", "previous_event_hash": "sha256:be3e3f71355e3dc443f8338075ad48980c6367aab9a505a8c9c75d82be3724df", "timestamp_utc": "2026-11-09T21:21:25.755240+00:00"}, {"event_id": "evt_acdca87f2dc34b93", "parent_event_id": "evt_3790c59500744e72", "branch_id": "main", "neuron_id": "neuron_systems_engineering", "subagent_role": "VERIFICADOR_V1_LOGICA", "event_type": "VERIFICATION_V1", "verdict": "APPROVED", "confidence_score": 1.0, "cycle_iteration": 1, "content_hash": "sha256:238ecf5e5740c5d340cbc0e4abcacdce270dc2c48e1a9d11cfbf23ab146a178a", "previous_event_hash": "sha256:5b199c61dbbc7819c0df8838d921488b596ebc7a2d8e00562dba5be5f2ade06d", "timestamp_utc": "2026-11-09T21:21:25.755240+00:00"}, {"event_id": "evt_a00e042369f44ec2", "parent_event_id": "evt_acdca87f2dc34b93", "branch_id": "main", "neuron_id": "neuron_systems_engineering", "subagent_role": "VERIFICADOR_V2_GROUNDING", "event_type": "VERIFICATION_V2", "verdict": "APPROVED", "confidence_score": 1.0, "cycle_iteration": 1, "content_hash": "sha256:43077007545d20a714d5ca5df1bf3faefc4a295dcb146d7a9dd43deaf4d6b27d", "previous_event_hash": "sha256:238ecf5e5740c5d340cbc0e4abcacdce270dc2c48e1a9d11cfbf23ab146a178a", "timestamp_utc": "2026-11-09T21:21:25.755240+00:00"}, {"event_id": "evt_c5ff570776a34d7f", "parent_event_id": "evt_a00e042369f44ec2", "branch_id": "main", "neuron_id": "neuron_systems_engineering", "subagent_role": "VERIFICADOR_V3_RED_TEAM", "event_type": "VERIFICATION_V3", "verdict": "APPROVED", "confidence_score": 1.0, "cycle_iteration": 1, "content_hash": "sha256:53162fb89560f58639e9d81fd5b46faefb04f88b4d9f6409c09fb9ae95aff911", "previous_event_hash": "sha256:43077007545d20a714d5ca5df1bf3faefc4a295dcb146d7a9dd43deaf4d6b27d", "timestamp_utc": "2026-11-09T21:21:25.755240+00:00"}, {"event_id": "evt_9c9ef94ea84f44fc", "parent_event_id": "evt_c5ff570776a34d7f", "branch_id": "main", "neuron_id": "neuron_systems_engineering", "subagent_role": "AXONIO_EMISSOR", "event_type": "AXON_EMITTED", "verdict": "APPROVED", "confidence_score": 1.0, "cycle_iteration": 1, "content_hash": "sha256:6550929fc43c8a65f1728bab8318383a79c696fdd432ff882faba7e08bb329d2", "previous_event_hash": "sha256:53162fb89560f58639e9d81fd5b46faefb04f88b4d9f6409c09fb9ae95aff911", "timestamp_utc": "2026-11-09T21:21:25.755240+00:00"}, {"event_id": "evt_65c5f7c8f950437d", "parent_event_id": "evt_9c9ef94ea84f44fc", "branch_id": "main", "neuron_id": "neuron_strategy_risk", "subagent_role": "DENDRITO_RECEPTOR", "event_type": "SIGNAL_RECEIVED", "verdict": "ACCEPTED", "confidence_score": 1.0, "cycle_iteration": 0, "content_hash": "sha256:64c99dd2f130292f48980a906971117455c7f12c1f46a3029c18d0e6ddc65cab", "previous_event_hash": "sha256:6550929fc43c8a65f1728bab8318383a79c696fdd432ff882faba7e08bb329d2", "timestamp_utc": "2026-11-09T21:21:25.755240+00:00"}, {"event_id": "evt_aed79a562c73481f", "parent_event_id": "evt_65c5f7c8f950437d", "branch_id": "main", "neuron_id": "neuron_strategy_risk", "subagent_role": "EXPANSOR_PREMISSAS", "event_type": "PREMISES_EXPANDED", "verdict": "PREMISES_EXPANDED", "confidence_score": 1.0, "cycle_iteration": 0, "content_hash": "sha256:adb306d6c3fc2e32d0d2f49aa5e4a42e71c5c357465ea4e1b4d0423704429868", "previous_event_hash": "sha256:64c99dd2f130292f48980a906971117455c7f12c1f46a3029c18d0e6ddc65cab", "timestamp_utc": "2026-11-09T21:21:25.755240+00:00"}, {"event_id": "evt_68b3cd3c979743f6", "parent_event_id": "evt_aed79a562c73481f", "branch_id": "main", "neuron_id": "neuron_strategy_risk", "subagent_role": "NUCLEO_PENSADOR", "event_type": "HYPOTHESIS_GENERATED", "verdict": "HYPOTHESIS_FORMULATED", "confidence_score": 0.5, "cycle_iteration": 1, "content_hash": "sha256:ecbab69284c821fcc4eb5f02005e0c124008b4c4f774d5a5da43fd712de41750", "previous_event_hash": "sha256:adb306d6c3fc2e32d0d2f49aa5e4a42e71c5c357465ea4e1b4d0423704429868", "timestamp_utc": "2026-11-09T21:21:25.755240+00:00"}, {"event_id": "evt_e43678384e574119", "parent_event_id": "evt_68b3cd3c979743f6", "branch_id": "main", "neuron_id": "neuron_strategy_risk", "subagent_role": "VERIFICADOR_V1_LOGICA", "event_type": "VERIFICATION_V1", "verdict": "APPROVED", "confidence_score": 1.0, "cycle_iteration": 1, "content_hash": "sha256:7419a0b1362fd7a0f554f91611847091b5c8d13dfe9153a4b928ba051abd7054", "previous_event_hash": "sha256:ecbab69284c821fcc4eb5f02005e0c124008b4c4f774d5a5da43fd712de41750", "timestamp_utc": "2026-11-09T21:21:25.755240+00:00"}, {"event_id": "evt_93a4f4746e04470c", "parent_event_id": "evt_e43678384e574119", "branch_id": "main", "neuron_id": "neuron_strategy_risk", "subagent_role": "VERIFICADOR_V2_GROUNDING", "event_type": "VERIFICATION_V2", "verdict": "APPROVED", "confidence_score": 1.0, "cycle_iteration": 1, "content_hash": "sha256:4d0d48066c2926dc5d2bbd0f5904c0c2f04cf786070bc02abb7ccdbb8958b026", "previous_event_hash": "sha256:7419a0b1362fd7a0f554f91611847091b5c8d13dfe9153a4b928ba051abd7054", "timestamp_utc": "2026-11-09T21:21:25.755240+00:00"}, {"event_id": "evt_b90c30f2568d4d1e", "parent_event_id": "evt_93a4f4746e04470c", "branch_id": "main", "neuron_id": "neuron_strategy_risk", "subagent_role": "VERIFICADOR_V3_RED_TEAM", "event_type": "VERIFICATION_V3", "verdict": "APPROVED", "confidence_score": 1.0, "cycle_iteration": 1, "content_hash": "sha256:795bea3f4f95f84095103890c54e579c77d29ef83be755a0dd86b0b98e0dea76", "previous_event_hash": "sha256:4d0d48066c2926dc5d2bbd0f5904c0c2f04cf786070bc02abb7ccdbb8958b026", "timestamp_utc": "2026-11-09T21:21:25.755240+00:00"}, {"event_id": "evt_bcf347b913f44330", "parent_event_id": "evt_b90c30f2568d4d1e", "branch_id": "main", "neuron_id": "neuron_strategy_risk", "subagent_role": "AXONIO_EMISSOR", "event_type": "AXON_EMITTED", "verdict": "APPROVED", "confidence_score": 1.0, "cycle_iteration": 1, "content_hash": "sha256:c9a6d29859457e063d146c97eab11aee6d921c36cd2817ac5091864fc5a75eab", "previous_event_hash": "sha256:795bea3f4f95f84095103890c54e579c77d29ef83be755a0dd86b0b98e0dea76", "timestamp_utc": "2026-11-09T21:21:25.755240+00:00"}, {"event_id": "evt_9af4effb34ad443c", "parent_event_id": "evt_bcf347b913f44330", "branch_id": "main", "neuron_id": "neuron_semantics_didactics", "subagent_role": "DENDRITO_RECEPTOR", "event_type": "SIGNAL_RECEIVED", "verdict": "ACCEPTED", "confidence_score": 1.0, "cycle_iteration": 0, "content_hash": "sha256:479abba4752e6007f0fe8d82b245cbeae8f671a34b810666ba3f03766279dc34", "previous_event_hash": "sha256:c9a6d29859457e063d146c97eab11aee6d921c36cd2817ac5091864fc5a75eab", "timestamp_utc": "2026-11-09T21:21:25.755240+00:00"}, {"event_id": "evt_c96d997129104126", "parent_event_id": "evt_9af4effb34ad443c", "branch_id": "main", "neuron_id": "neuron_semantics_didactics", "subagent_role": "EXPANSOR_PREMISSAS", "event_type": "PREMISES_EXPANDED", "verdict": "PREMISES_EXPANDED", "confidence_score": 1.0, "cycle_iteration": 0, "content_hash": "sha256:d109443290d2183a16bc1cbf154cd88bc71aef637ed3550a15a0f63cd656cc3a", "previous_event_hash": "sha256:479abba4752e6007f0fe8d82b245cbeae8f671a34b810666ba3f03766279dc34", "timestamp_utc": "2026-11-09T21:21:25.755240+00:00"}, {"event_id": "evt_40762a3b5fa04cf0", "parent_event_id": "evt_c96d997129104126", "branch_id": "main", "neuron_id": "neuron_semantics_didactics", "subagent_role": "NUCLEO_PENSADOR", "event_type": "HYPOTHESIS_GENERATED", "verdict": "HYPOTHESIS_FORMULATED", "confidence_score": 0.5, "cycle_iteration": 1, "content_hash": "sha256:ab7629ab79830653eeee88c639a37f02b7c90b09b458b1b425fa684efc4a927d", "previous_event_hash": "sha256:d109443290d2183a16bc1cbf154cd88bc71aef637ed3550a15a0f63cd656cc3a", "timestamp_utc": "2026-11-09T21:21:25.755240+00:00"}, {"event_id": "evt_821e408492d64e43", "parent_event_id": "evt_40762a3b5fa04cf0", "branch_id": "main", "neuron_id": "neuron_semantics_didactics", "subagent_role": "VERIFICADOR_V1_LOGICA", "event_type": "VERIFICATION_V1", "verdict": "APPROVED", "confidence_score": 1.0, "cycle_iteration": 1, "content_hash": "sha256:fa62a62f9c13c9865043bf8c2005a9e91e0aaf5fdfaae47b20679ba8509aa2d8", "previous_event_hash": "sha256:ab7629ab79830653eeee88c639a37f02b7c90b09b458b1b425fa684efc4a927d", "timestamp_utc": "2026-11-09T21:21:25.755240+00:00"}, {"event_id": "evt_f2530224d83d40d0", "parent_event_id": "evt_821e408492d64e43", "branch_id": "main", "neuron_id": "neuron_semantics_didactics", "subagent_role": "VERIFICADOR_V2_GROUNDING", "event_type": "VERIFICATION_V2", "verdict": "APPROVED", "confidence_score": 1.0, "cycle_iteration": 1, "content_hash": "sha256:32dc0bc8ac3aa4b8a410d87c959287ca2b5088314bc7cfcb9aba8995f8a9a1bc", "previous_event_hash": "sha256:fa62a62f9c13c9865043bf8c2005a9e91e0aaf5fdfaae47b20679ba8509aa2d8", "timestamp_utc": "2026-11-09T21:21:25.755240+00:00"}, {"event_id": "evt_cf98b6059d484e06", "parent_event_id": "evt_f2530224d83d40d0", "branch_id": "main", "neuron_id": "neuron_semantics_didactics", "subagent_role": "VERIFICADOR_V3_RED_TEAM", "event_type": "VERIFICATION_V3", "verdict": "APPROVED", "confidence_score": 1.0, "cycle_iteration": 1, "content_hash": "sha256:6d07b5ed0a71b15d93db39915588685f3553c6ff1fb892153ec9ce1de6f512c5", "previous_event_hash": "sha256:32dc0bc8ac3aa4b8a410d87c959287ca2b5088314bc7cfcb9aba8995f8a9a1bc", "timestamp_utc": "2026-11-09T21:21:25.755240+00:00"}, {"event_id": "evt_851a9a2e7d2f44a1", "parent_event_id": "evt_cf98b6059d484e06", "branch_id": "main", "neuron_id": "neuron_semantics_didactics", "subagent_role": "AXONIO_EMISSOR", "event_type": "AXON_EMITTED", "verdict": "APPROVED", "confidence_score": 1.0, "cycle_iteration": 1, "content_hash": "sha256:4370c52c7193696e4572ccfd16bc1a06ac16c52602d10492cc57d9b6aec99bb5", "previous_event_hash": "sha256:6d07b5ed0a71b15d93db39915588685f3553c6ff1fb892153ec9ce1de6f512c5", "timestamp_utc": "2026-11-09T21:21:25.755240+00:00"}, {"event_id": "evt_1c36f89c1cbf4ebf", "parent_event_id": "evt_851a9a2e7d2f44a1", "branch_id": "main", "neuron_id": "neuron_convergence_synthesis", "subagent_role": "convergence_synthesis_arbiter", "event_type": "CORTEX_CONVERGENCE", "verdict": "APPROVED", "confidence_score": 1.0, "cycle_iteration": 1, "content_hash": "sha256:2ec6625c03e2b62c1b501a8c6282d866604f55b57777341f85b429535be62d81", "previous_event_hash": "sha256:4370c52c7193696e4572ccfd16bc1a06ac16c52602d10492cc57d9b6aec99bb5", "timestamp_utc": "2026-11-09T21:21:25.755240+00:00"}];
+
+    function renderTable(events) {
+      const tbody = document.getElementById('eventsTbody');
+      tbody.innerHTML = '';
+
+      events.forEach((e, idx) => {
+        const tr = document.createElement('tr');
+
+        // Formatação de veredito
+        let verdictBadge = '';
+        const v = String(e.verdict || '');
+        if (v === 'APPROVED' || v === 'PASSED' || v === 'DAG_VALIDATED' || v === 'PREMISES_EXPANDED' || v === 'ACCEPTED') {
+          verdictBadge = `<span class="badge badge-approved">${v}</span>`;
+        } else if (v.includes('REJECTED') || v.includes('FAILURE')) {
+          verdictBadge = `<span class="badge badge-rejected">${v}</span>`;
+        } else if (e.event_type === 'CAUSAL_ROLLBACK') {
+          verdictBadge = `<span class="badge badge-rollback">ROLLBACK</span>`;
+        } else {
+          verdictBadge = `<span class="badge badge-branch">${v || 'RECORDED'}</span>`;
+        }
+
+        const prevHash = e.previous_event_hash ? e.previous_event_hash.substring(0, 15) + '...' : '-';
+        const contentHash = e.content_hash ? e.content_hash.substring(0, 15) + '...' : '-';
+        const eid = e.event_id || `evt_${idx}`;
+
+        tr.innerHTML = `
+          <td>${idx + 1}</td>
+          <td class="mono" style="color: var(--accent-cyan);">${eid}</td>
+          <td><span class="badge badge-branch">${e.branch_id || 'main'}</span></td>
+          <td><strong>${e.neuron_id || 'cortex'}</strong><br/><small style="color:var(--text-muted);">${e.subagent_role || ''}</small></td>
+          <td><code>${e.event_type || ''}</code></td>
+          <td>${verdictBadge}</td>
+          <td>${e.confidence_score !== undefined ? (e.confidence_score * 100).toFixed(0) + '%' : '-'}</td>
+          <td><span class="mono hash-badge" title="${e.previous_event_hash || ''}">${prevHash}</span></td>
+          <td><span class="mono hash-badge" title="${e.content_hash || ''}">${contentHash}</span></td>
+          <td><button class="btn-inspect" onclick="openModal('${eid}')">Inspecionar</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('event-counter').innerText = events.length;
+    }
+
+    function filterEvents() {
+      const query = document.getElementById('searchInput').value.toLowerCase();
+      const branch = document.getElementById('branchSelect').value;
+      const verdict = document.getElementById('verdictSelect').value;
+
+      const filtered = ALL_EVENTS.filter(e => {
+        const matchesQuery = !query ||
+          (e.event_id && e.event_id.toLowerCase().includes(query)) ||
+          (e.event_type && e.event_type.toLowerCase().includes(query)) ||
+          (e.neuron_id && e.neuron_id.toLowerCase().includes(query)) ||
+          (e.verdict && e.verdict.toLowerCase().includes(query));
+
+        const matchesBranch = !branch || e.branch_id === branch;
+
+        let matchesVerdict = true;
+        if (verdict) {
+          if (verdict === 'APPROVED') {
+            matchesVerdict = (e.verdict === 'APPROVED' || e.verdict === 'PASSED');
+          } else if (verdict === 'REJECTED') {
+            matchesVerdict = String(e.verdict || '').includes('REJECTED');
+          } else if (verdict === 'EPISTEMIC_FAILURE') {
+            matchesVerdict = String(e.verdict || '').includes('FAILURE');
+          } else if (verdict === 'CAUSAL_ROLLBACK') {
+            matchesVerdict = (e.event_type === 'CAUSAL_ROLLBACK');
+          }
+        }
+
+        return matchesQuery && matchesBranch && matchesVerdict;
+      });
+
+      renderTable(filtered);
+    }
+
+    function openModal(eventId) {
+      const ev = ALL_EVENTS.find(e => e.event_id === eventId);
+      if (!ev) return;
+
+      document.getElementById('modalEventTitle').innerText = `Evento: ${ev.event_id} (${ev.event_type})`;
+      document.getElementById('modalJsonContent').innerText = JSON.stringify(ev, null, 2);
+      document.getElementById('inspectModal').style.display = 'flex';
+    }
+
+    function closeModal(evt) {
+      if (evt.target.id === 'inspectModal') {
+        document.getElementById('inspectModal').style.display = 'none';
+      }
+    }
+
+    function closeModalDirect() {
+      document.getElementById('inspectModal').style.display = 'none';
+    }
+
+    // Render inicial da tabela
+    renderTable(ALL_EVENTS);
+  </script>
+</body>
+</html>
