@@ -2,6 +2,9 @@
 
 Implementação de referência, validada empiricamente, da arquitetura de **Redes Neurais Cognitivas Compostas**, **Event Sourcing Epistêmico em Merkle-DAG** e **Verificação Ortogonal em 3 Camadas (Lógica, Grounding Determinístico e Red Team Adversário)**.
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/HenriMafra/cerebro-cognitivo)
+*(Deploy gratuito em 1 clique do Servidor MCP HTTP/SSE na nuvem)*
+
 ---
 
 ## 1. Visão Geral da Arquitetura
