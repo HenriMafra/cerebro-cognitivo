@@ -181,6 +181,23 @@ def generate_telemetry_dashboard(
     # Preparação dos dados para a tabela forense em JSON
     events_json_escaped = json.dumps(nodes, ensure_ascii=False)
 
+    chaos_cards_html = "".join(
+        f"""
+      <div class="chaos-card">
+        <div class="chaos-header">
+          <div class="chaos-title">{html.escape(str(atk.get('name', 'Ataque Adversário')))}</div>
+          <span class="badge badge-approved">{html.escape(str(atk.get('status', 'CONTAINED')))}</span>
+        </div>
+        <div class="chaos-layer">Defesa: {html.escape(str(atk.get('layer', 'Córtex Global')))}</div>
+        <div class="chaos-desc">{html.escape(str(atk.get('description', '')))}</div>
+        <div class="chaos-defense">
+          <strong>Reação do Cérebro:</strong> {html.escape(str(atk.get('defense', '')))}
+        </div>
+      </div>
+      """
+        for atk in attacks_list
+    )
+
     # Montagem do template HTML
     html_content = f"""<!DOCTYPE html>
 <html lang="pt-BR">
@@ -772,19 +789,7 @@ def generate_telemetry_dashboard(
       <span class="pill pill-verified">100% Contenção Comprovada</span>
     </div>
     <div class="chaos-grid">
-      {''.join(f"""
-      <div class="chaos-card">
-        <div class="chaos-header">
-          <div class="chaos-title">{html.escape(str(atk.get('name', 'Ataque Adversário')))}</div>
-          <span class="badge badge-approved">{html.escape(str(atk.get('status', 'CONTAINED')))}</span>
-        </div>
-        <div class="chaos-layer">Defesa: {html.escape(str(atk.get('layer', 'Córtex Global')))}</div>
-        <div class="chaos-desc">{html.escape(str(atk.get('description', '')))}</div>
-        <div class="chaos-defense">
-          <strong>Reação do Cérebro:</strong> {html.escape(str(atk.get('defense', '')))}
-        </div>
-      </div>
-      """ for atk in attacks_list)}
+      {chaos_cards_html}
     </div>
   </section>
 

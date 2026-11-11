@@ -1,30 +1,53 @@
 """
-Servidor MCP (Model Context Protocol — JSON-RPC 2.0 via stdio) do Cérebro Cognitivo + Obsidian (MY BRAIN).
+Servidor MCP (Model Context Protocol — JSON-RPC 2.0 via Stdio e HTTP/SSE Remoto na Nuvem)
+do Cérebro Cognitivo Fractal Multi-Agente + Obsidian (MY BRAIN).
 
-Expõe 5 ferramentas MCP padronizadas (`tools/list` e `tools/call`) sem dependências externas:
-1. `brain_execute_cortex`: Executa uma missão no Córtex Global (Tálamo -> 5 Especialistas V1/V2/V3 -> Convergência)
-   e projeta certificados e quadros `.canvas` diretamente no Vault `MY BRAIN`.
-2. `brain_search_coala_rag`: Busca semântica BM25 FTS5 sobre o Vault `MY BRAIN` com `chunk_id` para citação literal V2.
-3. `brain_write_obsidian_note`: Cria/atualiza um Axioma (`01_Axiomas_do_Usuario`) ou Conhecimento Semântico
-   (`02_Conhecimento_Semantico`) no Obsidian e reindexa imediatamente no `CoALAMemoryStore`.
-4. `brain_verify_merkle_chain`: Executa auditoria forense completa da cadeia `SHA-256` no SQLite WAL.
-5. `obsidian_ui_control`: Interage em tempo real com a janela do Obsidian via plugin `Local REST API`
-   (`127.0.0.1:27124`) ou protocolo nativo `obsidian://open`.
+Conexão Bidirecional e Síncrona:
+- Vault -> Cérebro: Git pull automático antes de buscas e execuções para absorver notas feitas no PC/mobile.
+- Cérebro -> Vault: Git commit e push atômico a cada nota gerada ou missão executada pelo Córtex.
+
+Modos de Operação:
+1. Modo Stdio Local (padrão): Para uso direto no Claude Desktop, Cursor ou IDE local.
+2. Modo Servidor HTTP/SSE na Nuvem: Para deploy no Render, Railway, Fly.io, Cloud Run ou VPS.
+   - Endpoint SSE: GET /sse (conforme especificação oficial MCP SSE)
+   - Endpoint Mensagens: POST /messages?sessionId=...
+   - Endpoint Direto JSON-RPC: POST /jsonrpc ou POST /
+   - Endpoint Healthcheck: GET /health ou GET /
+
+Expõe 6 ferramentas MCP padronizadas sem dependências externas:
+1. `brain_execute_cortex`: Executa missão no Córtex Global com verificação V1/V2/V3 e projeta Canvas no Vault.
+2. `brain_search_coala_rag`: Busca semântica BM25 FTS5 com proveniência de chunk_id.
+3. `brain_write_obsidian_note`: Cria/atualiza Axioma ou Conhecimento Semântico com push automático.
+4. `brain_sync_vault`: Força sincronização bidirecional completa (pull -> reindex -> commit -> push).
+5. `brain_verify_merkle_chain`: Audita a integridade criptográfica SHA-256 no SQLite WAL.
+6. `obsidian_ui_control`: Interage com o Obsidian via Local REST API ou protocolo nativo obsidian://.
 """
 
 from __future__ import annotations
+import argparse
+import hmac
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
+import os
 from pathlib import Path
+import queue
 import re
 import sys
+import threading
 from typing import Any, Dict, List, Optional
+import urllib.parse
+import uuid
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from core.event_store import EpistemicEventStore
-from core.obsidian_bridge import ObsidianLocalRestClient, ObsidianVaultBridge
+from core.obsidian_bridge import (
+    ObsidianLocalRestClient,
+    ObsidianVaultBridge,
+    discover_default_vault_path,
+)
 from core.rag_memory import CoALAMemoryStore
 from core.schemas import utc_now_iso
 from run_mvp import (
@@ -41,9 +64,9 @@ MCP_TOOLS_SPEC: List[Dict[str, Any]] = [
     {
         "name": "brain_execute_cortex",
         "description": (
-            "Executa um objetivo no Córtex Cognitivo Fractal (5 Neurônios Especialistas em DAG com "
-            "verificação ortogonal V1/V2/V3 e Rollback Causal) e projeta os certificados e o quadro "
-            ".canvas no Vault MY BRAIN do Obsidian."
+            "Executa um objetivo no Córtex Cognitivo Fractal (Neurônios Especialistas em DAG com "
+            "verificação ortogonal V1 Lógica / V2 Sandbox AST / V3 Red Team e Rollback Causal), "
+            "projetando certificados, árvore Merkle-DAG e o quadro visual .canvas no Vault MY BRAIN com push automático."
         ),
         "inputSchema": {
             "type": "object",
@@ -65,7 +88,7 @@ MCP_TOOLS_SPEC: List[Dict[str, Any]] = [
         "name": "brain_search_coala_rag",
         "description": (
             "Busca conhecimento semântico versionado (SQLite FTS5 BM25) e axiomas do usuário ingeridos "
-            "a partir do Vault MY BRAIN do Obsidian, retornando chunk_ids verificáveis pela Camada V2."
+            "a partir do Vault MY BRAIN do Obsidian, sincronizando antes com o GitHub para garantir notas frescas."
         ),
         "inputSchema": {
             "type": "object",
@@ -86,7 +109,8 @@ MCP_TOOLS_SPEC: List[Dict[str, Any]] = [
         "name": "brain_write_obsidian_note",
         "description": (
             "Cria ou atualiza uma nota Markdown estruturada no Vault MY BRAIN do Obsidian "
-            "(como Axioma do Usuário ou Conhecimento Semântico) e indexa imediatamente no CoALAMemoryStore."
+            "(como Axioma do Usuário ou Conhecimento Semântico), indexa imediatamente no RAG "
+            "e faz git commit e push para o GitHub sincronizando o dispositivo do usuário."
         ),
         "inputSchema": {
             "type": "object",
@@ -109,6 +133,18 @@ MCP_TOOLS_SPEC: List[Dict[str, Any]] = [
         },
     },
     {
+        "name": "brain_sync_vault",
+        "description": (
+            "Executa sincronização bidirecional completa com o GitHub (git pull origin HEAD -> "
+            "reindexação RAG CoALA -> atualização de MOC e Dossiês -> git push origin HEAD) "
+            "garantindo que o Cérebro e o Obsidian em qualquer máquina estejam 100% alinhados."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {},
+        },
+    },
+    {
         "name": "brain_verify_merkle_chain",
         "description": (
             "Audita a integridade criptográfica SHA-256 de todos os eventos do EpistemicEventStore (SQLite WAL) "
@@ -122,7 +158,7 @@ MCP_TOOLS_SPEC: List[Dict[str, Any]] = [
     {
         "name": "obsidian_ui_control",
         "description": (
-            "Controla a interface gráfica ao vivo do Obsidian via Local REST API (se ativa) ou protocolo "
+            "Controla a interface gráfica do Obsidian via Local REST API (se ativa) ou protocolo "
             "nativo obsidian:// (abrir notas/canvas, consultar nota ativa na tela, abrir Graph View)."
         ),
         "inputSchema": {
@@ -144,16 +180,29 @@ MCP_TOOLS_SPEC: List[Dict[str, Any]] = [
 
 
 def handle_mcp_tool_call(name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
-    """Executa uma ferramenta MCP e retorna o resultado estruturado."""
+    """Executa uma ferramenta MCP e retorna o resultado estruturado de forma síncrona e bidirecional."""
     if name == "brain_execute_cortex":
         objective = str(arguments.get("objective", "Auditar invariantes do sistema"))
         fault_mode = str(arguments.get("fault_mode", "none"))
+
+        # 1. Puxa atualizações recentes do Obsidian antes de raciocinar
+        if DEFAULT_OBSIDIAN_VAULT.exists():
+            bridge = ObsidianVaultBridge(DEFAULT_OBSIDIAN_VAULT)
+            bridge.pull_vault_updates()
+
+        # 2. Executa a missão no Córtex (que projeta artefatos e faz push automático ao finalizar)
         res = execute_objective_in_cortex(objective=objective, inject_fault_mode=fault_mode)
         return res
 
     if name == "brain_search_coala_rag":
         query = str(arguments.get("query", ""))
         top_k = int(arguments.get("top_k", 5))
+
+        # Puxa notas recentes do GitHub para absorver mudanças feitas no celular ou desktop
+        if DEFAULT_OBSIDIAN_VAULT.exists():
+            bridge = ObsidianVaultBridge(DEFAULT_OBSIDIAN_VAULT)
+            bridge.pull_vault_updates()
+
         sync_obsidian_vault(DEFAULT_OBSIDIAN_VAULT)
         mem = CoALAMemoryStore(db_path=str(DEFAULT_RAG_DB))
         try:
@@ -183,6 +232,9 @@ def handle_mcp_tool_call(name: str, arguments: Dict[str, Any]) -> Dict[str, Any]
         body = str(arguments.get("content", ""))
         bridge = ObsidianVaultBridge(DEFAULT_OBSIDIAN_VAULT)
         bridge.initialize_vault_structure()
+
+        # Puxa atualizações antes de criar nova nota para evitar conflitos de branch
+        bridge.pull_vault_updates()
 
         safe_slug = re.sub(r"[^a-zA-Z0-9_-]+", "_", title.strip()).strip("_")
         if category == "axiom":
@@ -225,11 +277,31 @@ def handle_mcp_tool_call(name: str, arguments: Dict[str, Any]) -> Dict[str, Any]
 
         note_path = target_dir / filename
         note_path.write_text(md_text, encoding="utf-8")
+
+        # Sincroniza RAG e faz commit + push automático para a nuvem
         sync_info = sync_obsidian_vault(DEFAULT_OBSIDIAN_VAULT)
+        pushed = sync_info.get("vault_git_snapshot", {}).get("pushed_to_github", False)
+
         return {
             "ok": True,
             "note_path": str(note_path),
+            "pushed_to_github": pushed,
             "sync_summary": sync_info,
+        }
+
+    if name == "brain_sync_vault":
+        bridge = ObsidianVaultBridge(DEFAULT_OBSIDIAN_VAULT)
+        pull_result = bridge.pull_vault_updates()
+        sync_summary = sync_obsidian_vault(DEFAULT_OBSIDIAN_VAULT)
+        return {
+            "bidirectional_sync_completed": True,
+            "git_pull": pull_result,
+            "vault_root": sync_summary.get("vault_root"),
+            "axioms_active": sync_summary.get("axioms_ingested"),
+            "documents_indexed": sync_summary.get("documents_ingested"),
+            "chunks_fts5": sync_summary.get("total_chunks_indexed"),
+            "exported_dag_events": sync_summary.get("exported_events"),
+            "git_snapshot": sync_summary.get("vault_git_snapshot"),
         }
 
     if name == "brain_verify_merkle_chain":
@@ -298,7 +370,7 @@ def handle_jsonrpc_request(req: Dict[str, Any]) -> Optional[Dict[str, Any]]:
                 "capabilities": {"tools": {}},
                 "serverInfo": {
                     "name": "cerebro-cognitivo-obsidian-mcp",
-                    "version": "2.0.0",
+                    "version": "3.2.0",
                 },
             },
         }
@@ -346,7 +418,11 @@ def handle_jsonrpc_request(req: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 
 
 def serve_stdio() -> None:
-    """Loop principal JSON-RPC 2.0 via stdin/stdout para hosts MCP."""
+    """Loop principal JSON-RPC 2.0 via stdin/stdout para hosts MCP locais."""
+    # Garante que o Vault do Obsidian esteja localizado e inicializado
+    global DEFAULT_OBSIDIAN_VAULT
+    DEFAULT_OBSIDIAN_VAULT = discover_default_vault_path(auto_clone_if_missing=True)
+
     for line in sys.stdin:
         raw = line.strip()
         if not raw:
@@ -367,5 +443,223 @@ def serve_stdio() -> None:
             sys.stdout.flush()
 
 
+# ==============================================================================
+# SERVIDOR HTTP / SSE REMOTO NA NUVEM (MCP OVER SSE + DIRECT JSON-RPC)
+# ==============================================================================
+
+SSE_SESSIONS: Dict[str, queue.Queue] = {}
+SSE_LOCK = threading.Lock()
+
+
+def check_mcp_auth(headers: Any, query_params: Dict[str, List[str]]) -> bool:
+    """Verifica autenticação por token se MCP_AUTH_TOKEN estiver definido."""
+    expected_token = (os.environ.get("MCP_AUTH_TOKEN") or "").strip()
+    if not expected_token:
+        return True
+
+    auth_header = headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        token = auth_header[7:].strip()
+        if hmac.compare_digest(token, expected_token):
+            return True
+
+    if "token" in query_params:
+        if hmac.compare_digest(query_params["token"][0], expected_token):
+            return True
+
+    return False
+
+
+class MCPHTTPRequestHandler(BaseHTTPRequestHandler):
+    """Manipulador HTTP com suporte a SSE, JSON-RPC direto e CORS."""
+
+    def log_message(self, format: str, *args: Any) -> None:
+        sys.stderr.write(f"[MCP-HTTP] {self.command} {self.path} - {format % args}\n")
+
+    def _send_cors_headers(self) -> None:
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+    def do_OPTIONS(self) -> None:
+        self.send_response(204)
+        self._send_cors_headers()
+        self.end_headers()
+
+    def do_GET(self) -> None:
+        parsed = urllib.parse.urlparse(self.path)
+        query_params = urllib.parse.parse_qs(parsed.query)
+
+        # Healthcheck
+        if parsed.path in ("/", "/health", "/api/health"):
+            vault_exists = DEFAULT_OBSIDIAN_VAULT.exists()
+            payload = {
+                "status": "healthy",
+                "service": "cerebro-cognitivo-obsidian-mcp",
+                "version": "3.2.0",
+                "transport": "HTTP/SSE + Direct JSON-RPC",
+                "vault_root": str(DEFAULT_OBSIDIAN_VAULT),
+                "vault_exists": vault_exists,
+                "active_sse_sessions": len(SSE_SESSIONS),
+                "server_time_utc": utc_now_iso(),
+            }
+            raw = json.dumps(payload, indent=2, ensure_ascii=False).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self._send_cors_headers()
+            self.send_header("Content-Length", str(len(raw)))
+            self.end_headers()
+            self.wfile.write(raw)
+            return
+
+        # MCP SSE Stream
+        if parsed.path == "/sse":
+            if not check_mcp_auth(self.headers, query_params):
+                self.send_error(401, "Unauthorized: Token de autenticação inválido ou ausente")
+                return
+
+            session_id = uuid.uuid4().hex
+            msg_queue: queue.Queue = queue.Queue()
+            with SSE_LOCK:
+                SSE_SESSIONS[session_id] = msg_queue
+
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("Connection", "keep-alive")
+            self.send_header("X-Accel-Buffering", "no")
+            self._send_cors_headers()
+            self.end_headers()
+
+            endpoint_uri = f"/messages?sessionId={session_id}"
+            init_chunk = f"event: endpoint\r\ndata: {endpoint_uri}\r\n\r\n".encode("utf-8")
+            self.wfile.write(init_chunk)
+            self.wfile.flush()
+
+            try:
+                while True:
+                    try:
+                        msg = msg_queue.get(timeout=15.0)
+                        chunk = f"event: message\r\ndata: {json.dumps(msg, ensure_ascii=False)}\r\n\r\n".encode("utf-8")
+                        self.wfile.write(chunk)
+                        self.wfile.flush()
+                    except queue.Empty:
+                        self.wfile.write(b": keep-alive\r\n\r\n")
+                        self.wfile.flush()
+            except (BrokenPipeError, ConnectionResetError):
+                pass
+            finally:
+                with SSE_LOCK:
+                    SSE_SESSIONS.pop(session_id, None)
+            return
+
+        self.send_error(404, "Rota GET não encontrada")
+
+    def do_POST(self) -> None:
+        parsed = urllib.parse.urlparse(self.path)
+        query_params = urllib.parse.parse_qs(parsed.query)
+
+        if not check_mcp_auth(self.headers, query_params):
+            self.send_error(401, "Unauthorized: Token de autenticação inválido ou ausente")
+            return
+
+        content_length = int(self.headers.get("Content-Length", 0))
+        raw_body = self.rfile.read(content_length).decode("utf-8")
+        try:
+            req_json = json.loads(raw_body)
+        except Exception as e:
+            self.send_error(400, f"JSON inválido: {e}")
+            return
+
+        # MCP SSE Message POST
+        if parsed.path in ("/messages", "/message"):
+            session_id = query_params.get("sessionId", [""])[0]
+            with SSE_LOCK:
+                session_queue = SSE_SESSIONS.get(session_id)
+
+            if not session_queue:
+                self.send_error(404, f"Sessão SSE não encontrada ou expirada: {session_id}")
+                return
+
+            response_payload = handle_jsonrpc_request(req_json)
+            if response_payload is not None:
+                session_queue.put(response_payload)
+
+            ack = json.dumps({"status": "accepted", "sessionId": session_id}).encode("utf-8")
+            self.send_response(202)
+            self.send_header("Content-Type", "application/json")
+            self._send_cors_headers()
+            self.send_header("Content-Length", str(len(ack)))
+            self.end_headers()
+            self.wfile.write(ack)
+            return
+
+        # Direct HTTP JSON-RPC POST (/jsonrpc ou /)
+        if parsed.path in ("/jsonrpc", "/", "/api/mcp"):
+            response_payload = handle_jsonrpc_request(req_json)
+            raw_resp = json.dumps(response_payload, ensure_ascii=False).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self._send_cors_headers()
+            self.send_header("Content-Length", str(len(raw_resp)))
+            self.end_headers()
+            self.wfile.write(raw_resp)
+            return
+
+        self.send_error(404, "Rota POST não encontrada")
+
+
+def serve_http(host: str = "0.0.0.0", port: int = 8080) -> None:
+    """Inicia o servidor MCP HTTP/SSE multi-threaded para deploy em nuvem."""
+    global DEFAULT_OBSIDIAN_VAULT
+    DEFAULT_OBSIDIAN_VAULT = discover_default_vault_path(auto_clone_if_missing=True)
+
+    if DEFAULT_OBSIDIAN_VAULT.exists():
+        bridge = ObsidianVaultBridge(DEFAULT_OBSIDIAN_VAULT)
+        bridge.initialize_vault_structure()
+        bridge.pull_vault_updates()
+        sync_obsidian_vault(DEFAULT_OBSIDIAN_VAULT)
+
+    server = ThreadingHTTPServer((host, port), MCPHTTPRequestHandler)
+    print("=" * 78)
+    print(" CÉREBRO COGNITIVO · SERVIDOR MCP REMOTO NA NUVEM (HTTP/SSE + JSON-RPC)")
+    print("=" * 78)
+    print(f" -> Endereço HTTP   : http://{host}:{port}")
+    print(f" -> Endpoint SSE    : http://{host}:{port}/sse")
+    print(f" -> Endpoint JSONRPC: http://{host}:{port}/jsonrpc")
+    print(f" -> Healthcheck     : http://{host}:{port}/health")
+    print(f" -> Vault Local     : {DEFAULT_OBSIDIAN_VAULT}")
+    print(f" -> Sincronização   : Bidirecional Ativa (Git Pull on Request / Push on Write)")
+    print("=" * 78)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\nServidor MCP encerrado.")
+    finally:
+        server.server_close()
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Servidor MCP do Cérebro Cognitivo Fractal (Stdio & HTTP/SSE Nuvem)")
+    parser.add_argument("--stdio", action="store_true", default=False, help="Executa no modo stdio (padrão se nenhum host/porta for passado)")
+    parser.add_argument("--sse", "--http", action="store_true", default=False, help="Executa como servidor HTTP SSE para acesso remoto/nuvem")
+    parser.add_argument("--host", type=str, default=os.environ.get("HOST", "0.0.0.0"), help="Host para o servidor HTTP (padrão: 0.0.0.0)")
+    parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8080")), help="Porta para o servidor HTTP (padrão: 8080 ou $PORT)")
+    parser.add_argument("--vault-path", type=str, default=None, help="Caminho personalizado para o Vault MY-BRAIN")
+    args = parser.parse_args()
+
+    if args.vault_path:
+        global DEFAULT_OBSIDIAN_VAULT
+        DEFAULT_OBSIDIAN_VAULT = Path(args.vault_path)
+
+    # Se a variável de ambiente PORT estiver presente (ex: Render, Railway, Fly, Cloud Run)
+    # ou se a flag --sse/--http for passada, inicia o servidor HTTP/SSE na nuvem.
+    is_cloud_env = bool(os.environ.get("PORT")) or args.sse
+    if is_cloud_env and not args.stdio:
+        serve_http(host=args.host, port=args.port)
+    else:
+        serve_stdio()
+
+
 if __name__ == "__main__":
-    serve_stdio()
+    main()

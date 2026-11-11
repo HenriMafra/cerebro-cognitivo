@@ -1,0 +1,22 @@
+# ==============================================================================
+# render.yaml — Blueprint de Deploy 1-Click no Render (Serviço MCP na Nuvem)
+# ==============================================================================
+services:
+  - type: web
+    name: cerebro-cognitivo-mcp
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: GITHUB_TOKEN
+        sync: false  # Configure com seu Personal Access Token do GitHub para push no MY-BRAIN
+      - key: MCP_AUTH_TOKEN
+        generateValue: true  # Gera automaticamente um token Bearer seguro
+      - key: OBSIDIAN_VAULT_REPO
+        value: https://github.com/HenriMafra/MY-BRAIN.git

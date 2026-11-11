@@ -225,11 +225,15 @@ def discover_default_vault_path(auto_clone_if_missing: bool = False) -> Path:
     if auto_clone_if_missing:
         try:
             target_clone.parent.mkdir(parents=True, exist_ok=True)
+            token = (os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN") or "").strip()
+            clone_url = DEFAULT_GITHUB_VAULT_REPO
+            if token and "@" not in clone_url:
+                clone_url = f"https://x-access-token:{token}@github.com/HenriMafra/MY-BRAIN.git"
             subprocess.run(
-                ["git", "clone", DEFAULT_GITHUB_VAULT_REPO, str(target_clone)],
+                ["git", "clone", clone_url, str(target_clone)],
                 capture_output=True,
                 text=True,
-                timeout=25.0,
+                timeout=60.0,
             )
             if target_clone.exists():
                 return target_clone
@@ -561,12 +565,14 @@ class ObsidianVaultBridge:
             )
             note_path.write_text(content, encoding="utf-8")
 
-    def ingest_vault_knowledge(self, memory_store: CoALAMemoryStore) -> ObsidianIngestionReport:
+    def ingest_vault_knowledge(self, memory_store: CoALAMemoryStore, pull_updates: bool = True) -> ObsidianIngestionReport:
         """
         Escaneia `01_Axiomas_do_Usuario/` e `02_Conhecimento_Semantico/` no Vault `MY BRAIN`,
         ingere axiomas e documentos na memória tripartite `CoALAMemoryStore` (FTS5 BM25)
         e retorna um `ObsidianIngestionReport` detalhado.
         """
+        if pull_updates:
+            self.pull_vault_updates()
         self._ensure_directories()
         axioms_count = 0
         docs_count = 0
@@ -1300,12 +1306,59 @@ class ObsidianVaultBridge:
             pass
         return uri
 
+    def _ensure_git_remote_auth(self) -> None:
+        """Configura credenciais automáticas no git se GITHUB_TOKEN ou GH_TOKEN estiverem presentes."""
+        token = (os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN") or "").strip()
+        if not (self.vault_root / ".git").exists():
+            return
+        try:
+            # Configura user.name e user.email para evitar bloqueios de commit em ambientes novos/containers
+            subprocess.run(["git", "config", "user.name", "Cerebro Cognitivo AI"], cwd=str(self.vault_root), capture_output=True, timeout=3.0)
+            subprocess.run(["git", "config", "user.email", "cerebro@cognitivo.local"], cwd=str(self.vault_root), capture_output=True, timeout=3.0)
+            if token:
+                remote_proc = subprocess.run(["git", "remote", "get-url", "origin"], cwd=str(self.vault_root), capture_output=True, text=True, timeout=3.0)
+                if remote_proc.returncode == 0:
+                    cur_url = (remote_proc.stdout or "").strip()
+                    if "github.com/HenriMafra/MY-BRAIN" in cur_url and "@" not in cur_url:
+                        auth_url = f"https://x-access-token:{token}@github.com/HenriMafra/MY-BRAIN.git"
+                        subprocess.run(["git", "remote", "set-url", "origin", auth_url], cwd=str(self.vault_root), capture_output=True, timeout=3.0)
+        except Exception:
+            pass
+
+    def pull_vault_updates(self) -> Dict[str, Any]:
+        """
+        Executa `git pull --rebase --autostash origin HEAD` no Vault do Obsidian
+        para garantir sincronização bidirecional em tempo real com alterações remotas feitas pelo usuário.
+        """
+        if not (self.vault_root / ".git").exists():
+            return {"pulled": False, "reason": "not_a_git_repo"}
+        try:
+            self._ensure_git_remote_auth()
+            remote_proc = subprocess.run(["git", "remote"], cwd=str(self.vault_root), capture_output=True, text=True, timeout=3.0)
+            if "origin" not in (remote_proc.stdout or "").splitlines():
+                return {"pulled": False, "reason": "no_origin_remote"}
+            proc = subprocess.run(
+                ["git", "pull", "--rebase", "--autostash", "origin", "HEAD"],
+                cwd=str(self.vault_root),
+                capture_output=True,
+                text=True,
+                timeout=20.0,
+            )
+            return {
+                "pulled": proc.returncode == 0,
+                "stdout": (proc.stdout or "").strip(),
+                "stderr": (proc.stderr or "").strip() if proc.returncode != 0 else "",
+            }
+        except Exception as exc:
+            return {"pulled": False, "error": str(exc)}
+
     def commit_vault_snapshot(self, message: str = "chore(brain-sync): snapshot automatico do Cerebro Cognitivo") -> Dict[str, Any]:
         """
         Garante que o Vault tenha `.gitignore` seguro (excluindo `workspace.json` e chaves do Local REST API,
         mas preservando a configuração de auto-sync do `obsidian-git`) e cria um commit Git atômico
         com `git pull --rebase --autostash` e `git push origin HEAD` automáticos para a nuvem!
         """
+        self._ensure_git_remote_auth()
         gitignore_path = self.vault_root / ".gitignore"
         safe_gitignore = (
             "# Ignorar estados voláteis de janela e segredos de API local\n"
