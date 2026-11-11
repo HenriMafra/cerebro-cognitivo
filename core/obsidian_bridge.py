@@ -246,6 +246,7 @@ class ObsidianVaultBridge:
     DIR_EVENTS = "04_Certificados_e_Execucoes/Eventos_Merkle_DAG"
     DIR_CANVAS = "05_Mapas_Visuais_Canvas"
     DIR_HIPPOCAMPUS = "06_Sabedoria_Consolidada_Hipocampo"
+    DIR_GOVERNANCE = "07_Governanca_Homeostase_e_Dossies"
     MOC_FILENAME = "00_Painel_Central_MOC.md"
 
     def __init__(self, vault_path: str | Path) -> None:
@@ -260,6 +261,7 @@ class ObsidianVaultBridge:
             self.DIR_EVENTS,
             self.DIR_CANVAS,
             self.DIR_HIPPOCAMPUS,
+            self.DIR_GOVERNANCE,
         ):
             (self.vault_root / rel).mkdir(parents=True, exist_ok=True)
 
@@ -271,6 +273,8 @@ class ObsidianVaultBridge:
         - Axiomas do Usuário (Ciano)
         - Conhecimento Semântico CoALA (Verde Esmeralda)
         - Neurônios Especialistas (Violeta)
+        - Hipocampo Sináptico (Rosa/Magenta)
+        - Governança e Dossiês Cristalinos (Âmbar/Laranja)
         - Eventos de Rollback Causal / Rejeição (Vermelho)
         - Certificados e Eventos Aprovados (Azul)
         """
@@ -291,6 +295,7 @@ class ObsidianVaultBridge:
             {"query": f"path:{self.DIR_SEMANTIC}", "color": {"a": 1, "rgb": 1096065}},
             {"query": f"path:{self.DIR_NEURONS}", "color": {"a": 1, "rgb": 9133302}},
             {"query": f"path:{self.DIR_HIPPOCAMPUS}", "color": {"a": 1, "rgb": 15426466}},
+            {"query": f"path:{self.DIR_GOVERNANCE}", "color": {"a": 1, "rgb": 16090651}},
             {"query": "tag:#verdict/REJECTED", "color": {"a": 1, "rgb": 15680580}},
             {"query": f"path:{self.DIR_EXECUTIONS}", "color": {"a": 1, "rgb": 3900150}},
         ]
@@ -484,6 +489,8 @@ class ObsidianVaultBridge:
                 f"- **Onda Topológica (Algoritmo de Kahn)**: Onda `{info['wave']}`\n"
                 f"- **Especialidade Epistêmica**: {info['specialty']}\n"
                 f"- **Conexões Sinápticas de Saída (Downstream)**: {downstream_links}\n"
+                f"- **Dossiê Arquitetural e Epistêmico Cristalino**: [[Dossie_{neuron_id}]]\n"
+                f"- **Camada de Meta-Governança**: [[00_Relatorio_Severo_Meta_Governanca]]\n"
                 f"- **Painel Central**: [[00_Painel_Central_MOC]]\n\n"
                 "## Micro-Arquitetura Interna (8 Estágios Auto-Similares)\n\n"
                 "1. **Micro-Córtex de Contexto**: Filtra sinais sinápticos, axiomas e restrições negativas.\n"
@@ -1035,6 +1042,7 @@ class ObsidianVaultBridge:
         axiom_files = sorted((self.vault_root / self.DIR_AXIOMS).glob("*.md"))
         kb_files = sorted((self.vault_root / self.DIR_SEMANTIC).glob("*.md"))
         dyn_neuron_files = sorted((self.vault_root / self.DIR_NEURONS).glob("Neuronio_Dinamico_*.md"))
+        dossier_files = sorted((self.vault_root / self.DIR_GOVERNANCE).glob("Dossie_*.md"))
         exec_files = sorted(
             (self.vault_root / self.DIR_EXECUTIONS).glob("Execucao_*.md"),
             key=lambda p: p.stat().st_mtime,
@@ -1045,9 +1053,14 @@ class ObsidianVaultBridge:
         axioms_list_md = "\n".join(f"- [[{f.stem}]]" for f in axiom_files) or "- *(Nenhum axioma)*"
         kb_list_md = "\n".join(f"- [[{f.stem}]]" for f in kb_files) or "- *(Nenhum documento)*"
         dyn_neurons_md = (
-            "\n".join(f"- [[{f.stem}]] *(Auto-gerado por Neurogênese)*" for f in dyn_neuron_files)
+            "\n".join(f"- [[{f.stem}]] *(Macro-Neurônio Dinâmico Ativo)*" for f in dyn_neuron_files)
             if dyn_neuron_files
             else "- *(Nenhum neurônio dinâmico criado ainda — fale sobre um tema inédito para acionar a Neurogênese!)*"
+        )
+        dossiers_list_md = (
+            "\n".join(f"- [[{f.stem}]]" for f in dossier_files)
+            if dossier_files
+            else "- *(Execute a sincronização para gerar os Dossiês Cristalinos)*"
         )
         exec_list_md = "\n".join(f"- [[{f.stem}]]" for f in exec_files[:10]) or "- *(Nenhuma execução registrada)*"
         events_list_md = "\n".join(f"- [[{f.stem}]]" for f in rollback_events) or "- *(Nenhum evento exportado)*"
@@ -1063,20 +1076,25 @@ class ObsidianVaultBridge:
         content = (
             "---\n"
             "type: moc_dashboard\n"
-            "title: \"Painel Central — MY BRAIN (Cérebro Cognitivo Fractal v3.0 Estendido)\"\n"
+            "title: \"Painel Central — MY BRAIN (Cérebro Cognitivo Fractal v3.2 + Meta-Governança)\"\n"
             f"updated_utc: {utc_now_iso()}\n"
             "tags:\n"
             "  - moc\n"
             "  - my_brain\n"
             "---\n\n"
-            "# 🧠 Painel Central — MY BRAIN (`Cérebro Cognitivo Fractal v3.0`)\n\n"
-            "> **Bem-vindo ao Córtex Visual Estendido (12 Nós Neurais em 4 Lobos + Hipocampo)!**\n"
+            "# 🧠 Painel Central — MY BRAIN (`Cérebro Cognitivo Fractal v3.2`)\n\n"
+            "> **Bem-vindo ao Córtex Visual Estendido (12 Nós Canônicos + Macro-Neurônios Dinâmicos + Camada Severa de Meta-Governança)!**\n"
             "> Pressione `Ctrl + G` no Obsidian para abrir o **Graph View** com setas causais e grupos cromáticos pré-configurados, ou abra os quadros interativos em `05_Mapas_Visuais_Canvas/`.\n\n"
             "## 📊 Telemetria Forense em Tempo Real\n\n"
             f"- **Integridade Criptográfica da Cadeia**: `{chain_status}`\n"
             f"- **Eventos Imutáveis no SQLite WAL**: `{total_events}`\n"
             f"- **Branches no Merkle-DAG**: `{total_branches}` | **Rollbacks Causais Contidos**: `{total_rollbacks}`\n"
             f"{ing_info}\n"
+            "---\n\n"
+            "## ⚖️ Camada Severa de Meta-Governança, Calibração e Poda Sináptica (`07_Governanca_Homeostase_e_Dossies/`)\n\n"
+            "- 👉 **[[00_Relatorio_Severo_Meta_Governanca|📋 Relatório Executivo da Camada Severa de Meta-Governança, Pesos Sinápticos e Poda]]**\n"
+            "- **Dossiês Arquiteturais e Epistêmicos Cristalinos (Todos os Neurônios Ativos e Podados)**:\n"
+            f"{dossiers_list_md}\n\n"
             "---\n\n"
             "## 🗺️ Quadros Visuais Interativos (Obsidian Canvas)\n\n"
             "- [[01_Arquitetura_Macro_e_Micro_Cortex.canvas|📐 01. Arquitetura Completa Macro e Micro-Córtex (Canvas)]]\n"
@@ -1085,23 +1103,23 @@ class ObsidianVaultBridge:
             "---\n\n"
             "## 🧬 Topologia Estendida: 12 Nós Neurais em 4 Lobos Corticais (`03_Neuronios_Especialistas/`)\n\n"
             "1. **Onda 0 (Entrada Sensorial Adaptativa)**:\n"
-            "   - [[Neuronio_00_Talamo_Sensorial]]\n"
+            "   - [[Neuronio_00_Talamo_Sensorial]] · ([[Dossie_neuron_sensory_input|Dossiê Cristalino]])\n"
             "2. **Onda 1 (Fundação Formal, Factual e Criptográfica)**:\n"
-            "   - [[Neuronio_01_Logica_e_Matematica]] *(Lobo Frontal Formal)*\n"
-            "   - [[Neuronio_04_Fatos_e_Proveniencia]] *(Lobo Temporal Semântico)*\n"
-            "   - [[Neuronio_07_Criptografia_e_Seguranca_ZeroTrust]] *(Lobo Parietal Criptográfico)*\n"
+            "   - [[Neuronio_01_Logica_e_Matematica]] *(Lobo Frontal Formal)* · ([[Dossie_neuron_logic_math|Dossiê]])\n"
+            "   - [[Neuronio_04_Fatos_e_Proveniencia]] *(Lobo Temporal Semântico)* · ([[Dossie_neuron_epistemic_facts|Dossiê]])\n"
+            "   - [[Neuronio_07_Criptografia_e_Seguranca_ZeroTrust]] *(Lobo Parietal Criptográfico)* · ([[Dossie_neuron_crypto_security|Dossiê]])\n"
             "3. **Onda 2 (Engenharia, Causalidade e Risco BFT)**:\n"
-            "   - [[Neuronio_02_Engenharia_de_Sistemas]] *(Lobo Executivo de Engenharia)*\n"
-            "   - [[Neuronio_03_Estrategia_e_Risco]] *(Lobo Parietal de Risco & BFT)*\n"
-            "   - [[Neuronio_08_Inferencia_Causal_e_Contrafactual]] *(Lobo Frontal Do-Calculus)*\n"
+            "   - [[Neuronio_02_Engenharia_de_Sistemas]] *(Lobo Executivo de Engenharia)* · ([[Dossie_neuron_systems_engineering|Dossiê]])\n"
+            "   - [[Neuronio_03_Estrategia_e_Risco]] *(Lobo Parietal de Risco & BFT)* · ([[Dossie_neuron_strategy_risk|Dossiê]])\n"
+            "   - [[Neuronio_08_Inferencia_Causal_e_Contrafactual]] *(Lobo Frontal Do-Calculus)* · ([[Dossie_neuron_causal_counterfactual|Dossiê]])\n"
             "4. **Onda 3 (Metacognição, Hipocampo, Planejamento Recursivo e Semântica)**:\n"
-            "   - [[Neuronio_09_Metacognicao_e_Calibracao_Epistemica]] *(Lobo Pré-Frontal Metacognitivo)*\n"
-            "   - [[Neuronio_10_Hipocampo_Consolidacao_Sinaptica]] *(Hipocampo de Plasticidade)*\n"
-            "   - [[Neuronio_11_Planejador_Recursivo_SubDAG]] *(Córtex Pré-Motor Recursivo)*\n"
-            "   - [[Neuronio_05_Semantica_e_Didatica]] *(Lobo Temporal de Síntese)*\n"
+            "   - [[Neuronio_09_Metacognicao_e_Calibracao_Epistemica]] *(Lobo Pré-Frontal Metacognitivo)* · ([[Dossie_neuron_metacognition_calibration|Dossiê]])\n"
+            "   - [[Neuronio_10_Hipocampo_Consolidacao_Sinaptica]] *(Hipocampo de Plasticidade)* · ([[Dossie_neuron_episodic_consolidation|Dossiê]])\n"
+            "   - [[Neuronio_11_Planejador_Recursivo_SubDAG]] *(Córtex Pré-Motor Recursivo)* · ([[Dossie_neuron_autonomous_planner|Dossiê]])\n"
+            "   - [[Neuronio_05_Semantica_e_Didatica]] *(Lobo Temporal de Síntese)* · ([[Dossie_neuron_semantics_didactics|Dossiê]])\n"
             "5. **Onda 4 (Veredito Córtex Global)**:\n"
-            "   - [[Neuronio_06_Convergencia_e_Sintese]]\n\n"
-            "### ✨ Neocórtex Dinâmico (Neurônios Criados por Neurogênese Sob Demanda)\n\n"
+            "   - [[Neuronio_06_Convergencia_e_Sintese]] · ([[Dossie_neuron_convergence_synthesis|Dossiê Cristalino]])\n\n"
+            "### ✨ Neocórtex Dinâmico (Macro-Neurônios Criados por Neurogênese Ontológica)\n\n"
             f"{dyn_neurons_md}\n\n"
             "---\n\n"
             "## 💎 Axiomas do Usuário (`01_Axiomas_do_Usuario/`)\n"
@@ -1118,6 +1136,29 @@ class ObsidianVaultBridge:
             f"{events_list_md}\n"
         )
         moc_path.write_text(content, encoding="utf-8")
+
+        # Atualiza também o README.md na raiz do Vault para visualização direta no GitHub (repositório MY-BRAIN)
+        readme_path = self.vault_root / "README.md"
+        readme_md = (
+            "# 🧠 MY BRAIN — Cérebro Cognitivo Fractal Multi-Agente (Obsidian Vault & Especificação Cristalina)\n\n"
+            "Repositório oficial do Vault **`MY BRAIN`**, conectado bidirecionalmente ao motor transacional "
+            "**Cérebro Cognitivo Fractal Multi-Agente v3.2**.\n\n"
+            "## 🏛️ Estrutura Arquitetural do Vault\n\n"
+            "- **[`00_Painel_Central_MOC.md`](./00_Painel_Central_MOC.md)**: Mapa de Conteúdo Central (MOC) e Telemetria Forense.\n"
+            "- **[`01_Axiomas_do_Usuario/`](./01_Axiomas_do_Usuario/)**: Premissas e diretrizes inegociáveis (`AXIOM_USER`).\n"
+            "- **[`02_Conhecimento_Semantico/`](./02_Conhecimento_Semantico/)**: Base documental versionada indexada via SQLite FTS5 BM25 (`RAG_DOCUMENT`).\n"
+            "- **[`03_Neuronios_Especialistas/`](./03_Neuronios_Especialistas/)**: Os 12 Nós Neurais Canônicos distribuídos em 4 Lobos Corticais + Macro-Neurônios Dinâmicos criados por Neurogênese Ontológica.\n"
+            "- **[`04_Certificados_e_Execucoes/`](./04_Certificados_e_Execucoes/)**: Certificados criptográficos SHA-256/Ed25519 e Eventos do Merkle-DAG.\n"
+            "- **[`05_Mapas_Visuais_Canvas/`](./05_Mapas_Visuais_Canvas/)**: Quadros interativos JSON Canvas (`.canvas`) nativos do Obsidian.\n"
+            "- **[`06_Sabedoria_Consolidada_Hipocampo/`](./06_Sabedoria_Consolidada_Hipocampo/)**: Memória de Plasticidade Sináptica de Longo Prazo (`NEGATIVE_CONSTRAINT` + `DISTILLED_INVARIANT`).\n"
+            "- **[`07_Governanca_Homeostase_e_Dossies/`](./07_Governanca_Homeostase_e_Dossies/)**: **Camada Severa de Meta-Governança, Calibração Sináptica ($W_i$), Poda (`DORMANT_PRUNED`) e Dossiês Cristalinos de 100% dos Neurônios**.\n"
+            "  - 👉 **[`00_Relatorio_Severo_Meta_Governanca.md`](./07_Governanca_Homeostase_e_Dossies/00_Relatorio_Severo_Meta_Governanca.md)**\n\n"
+            "## ⚖️ Governança Epistêmica e Poda Sináptica\n\n"
+            "Todo neurônio criado no Cérebro (seja nativo, seja um Macro-Neurônio nascido por Neurogênese Dinâmica como `neuron_dyn_fisica_avancada`, "
+            "ou um neurônio de pico nichado desativado por poda sináptica como `neuron_dyn_dilatacao_temporal_aplicada`) possui um **Dossiê Arquitetural e Epistêmico Cristalino** "
+            "auditado em [`07_Governanca_Homeostase_e_Dossies/`](./07_Governanca_Homeostase_e_Dossies/).\n"
+        )
+        readme_path.write_text(readme_md, encoding="utf-8")
         return moc_path
 
     def project_plasticity_to_vault(self, plasticity_memory: Any) -> Path:
@@ -1253,8 +1294,29 @@ class ObsidianVaultBridge:
                 text=True,
                 timeout=5.0,
             )
+            pushed = False
+            remote_proc = subprocess.run(
+                ["git", "remote"],
+                cwd=str(self.vault_root),
+                capture_output=True,
+                text=True,
+                timeout=3.0,
+            )
+            if "origin" in (remote_proc.stdout or "").splitlines():
+                try:
+                    push_proc = subprocess.run(
+                        ["git", "push", "origin", "HEAD"],
+                        cwd=str(self.vault_root),
+                        capture_output=True,
+                        text=True,
+                        timeout=10.0,
+                    )
+                    pushed = push_proc.returncode == 0
+                except Exception:
+                    pushed = False
             return {
                 "committed": commit_proc.returncode == 0,
+                "pushed_to_github": pushed,
                 "stdout": (commit_proc.stdout or "").strip(),
             }
         except Exception as e:

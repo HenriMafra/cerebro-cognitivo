@@ -23,6 +23,7 @@ from core.extended_cortex_v3 import (
     ExtendedCognitiveCortexV3,
     SynapticPlasticityMemory,
 )
+from core.meta_governance_layer import SevereMetaGovernanceLayer
 from core.obsidian_bridge import NEURON_HUB_MAP, ObsidianVaultBridge
 from core.schemas import VerdictStatus
 
@@ -156,6 +157,77 @@ class TestExtendedCognitiveBrainV3(unittest.TestCase):
                 self.assertEqual(sp3.neuron_id, "neuron_dyn_fisica_avancada")
                 self.assertEqual(sp3.note_name, "Neuronio_Dinamico_Fisica_Avancada")
             finally:
+                NEURON_HUB_MAP.pop("neuron_dyn_biologia_e_medicina", None)
+                NEURON_HUB_MAP.pop("neuron_dyn_fisica_avancada", None)
+                plasticity.close()
+                store.close()
+
+    def test_06_severe_meta_governance_calibration_pruning_and_crystalline_dossiers(self) -> None:
+        """
+        Valida a Camada Severa de Meta-Governança (`SevereMetaGovernanceLayer`):
+        - Calibração do Peso Sináptico ($W_i$).
+        - Desativação (`DORMANT_PRUNED`) automática de neurônios nichados históricos (ex.: `neuron_dyn_dilatacao_temporal_aplicada`)
+          absorvidos pelo Macro-Neurônio `neuron_dyn_fisica_avancada`.
+        - Geração do Relatório Executivo e dos Dossiês Arquiteturais e Epistêmicos Cristalinos para 100% dos neurônios.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            vault_dir = Path(tmp) / "MY BRAIN"
+            bridge = ObsidianVaultBridge(vault_dir)
+            bridge.initialize_vault_structure()
+
+            store = EpistemicEventStore(":memory:")
+            plasticity = SynapticPlasticityMemory(":memory:")
+            gov = SevereMetaGovernanceLayer(":memory:")
+            try:
+                # Simula um evento histórico de um neurônio nichado antigo (neuron_dyn_dilatacao_temporal_aplicada)
+                store.record_event(
+                    neuron_id="neuron_dyn_dilatacao_temporal_aplicada",
+                    subagent_role="thinker",
+                    event_type="NEURON_TURN_APPROVED",
+                    epistemic_state={"note": "Pico pontual antigo sobre dilatação temporal"},
+                    delta_changes={"status": "APPROVED"},
+                    verdict="APPROVED",
+                    confidence_score=0.95,
+                    cycle_iteration=1,
+                )
+
+                # Executa o Córtex sobre Dilatação Temporal -> Aciona o Macro-Neurônio neuron_dyn_fisica_avancada
+                cortex = ExtendedCognitiveCortexV3(event_store=store, plasticity_memory=plasticity)
+                res = cortex.process_v3("DILATAÇÃO TEMPORAL APLICADA")
+                self.assertEqual(res.status, VerdictStatus.APPROVED)
+
+                audit_summary = gov.audit_and_calibrate_brain(store, plasticity)
+                # 12 nós canônicos + 1 Macro-Neurônio ativo (fisica_avancada) + 1 Neurônio nichado podado (dilatacao_temporal_aplicada) = 14
+                self.assertEqual(audit_summary["total_governed_neurons"], 14)
+                self.assertEqual(audit_summary["active_neurons"], 13)
+                self.assertEqual(audit_summary["pruned_dormant_neurons"], 1)
+
+                by_id = {r.neuron_id: r for r in audit_summary["records"]}
+                self.assertIn("neuron_dyn_fisica_avancada", by_id)
+                self.assertEqual(by_id["neuron_dyn_fisica_avancada"].status, "ACTIVE")
+                self.assertGreater(by_id["neuron_dyn_fisica_avancada"].synaptic_weight, 1.0)
+
+                self.assertIn("neuron_dyn_dilatacao_temporal_aplicada", by_id)
+                pruned_rec = by_id["neuron_dyn_dilatacao_temporal_aplicada"]
+                self.assertEqual(pruned_rec.status, "DORMANT_PRUNED")
+                self.assertEqual(pruned_rec.synaptic_weight, 0.0)
+                self.assertEqual(pruned_rec.superseded_by, "neuron_dyn_fisica_avancada")
+
+                # Escreve os dossiês cristalinos no Vault
+                out = gov.write_crystalline_dossiers_to_vault(bridge.vault_root, audit_summary, event_store=store)
+                self.assertEqual(out["dossiers_written"], 14)
+
+                gov_dir = bridge.vault_root / bridge.DIR_GOVERNANCE
+                self.assertTrue((gov_dir / "00_Relatorio_Severo_Meta_Governanca.md").exists())
+                pruned_dossier = gov_dir / "Dossie_neuron_dyn_dilatacao_temporal_aplicada.md"
+                macro_dossier = gov_dir / "Dossie_neuron_dyn_fisica_avancada.md"
+                self.assertTrue(pruned_dossier.exists())
+                self.assertTrue(macro_dossier.exists())
+                self.assertIn("DORMANT_PRUNED", pruned_dossier.read_text(encoding="utf-8"))
+                self.assertIn("neuron_dyn_fisica_avancada", pruned_dossier.read_text(encoding="utf-8"))
+            finally:
+                NEURON_HUB_MAP.pop("neuron_dyn_fisica_avancada", None)
+                gov.close()
                 plasticity.close()
                 store.close()
 

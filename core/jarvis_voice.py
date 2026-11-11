@@ -22,6 +22,7 @@ from .cortex import FractalCognitiveCortex
 from .event_store import EpistemicEventStore
 from .extended_cortex_v3 import ExtendedCognitiveCortexV3, SynapticPlasticityMemory
 from .llm_bridge import call_gemini_json
+from .meta_governance_layer import SevereMetaGovernanceLayer
 from .obsidian_bridge import ObsidianLocalRestClient, ObsidianVaultBridge
 from .rag_memory import CoALAMemoryStore
 from .schemas import utc_now_iso
@@ -200,6 +201,7 @@ class JarvisCognitiveAssistant:
         # 2. Ingerir notas do Obsidian e buscar contexto no CoALAMemoryStore (FTS5 BM25)
         mem_store = CoALAMemoryStore(db_path=self.rag_db_path)
         plasticity = SynapticPlasticityMemory(db_path=self.rag_db_path)
+        gov = SevereMetaGovernanceLayer(db_path=self.rag_db_path)
         store = EpistemicEventStore(db_path=self.db_path, jsonl_path=self.jsonl_path)
         try:
             ing_report = self.bridge.ingest_vault_knowledge(mem_store)
@@ -218,14 +220,19 @@ class JarvisCognitiveAssistant:
             )
             res_dict = cortex_res.to_dict()
 
-            # 4. Projetar execução, certificados, Hipocampo e Canvas no Vault MY BRAIN
+            # 4. Projetar execução, certificados, Hipocampo, Dossiês Cristalinos e Canvas no Vault MY BRAIN
             proj = self.bridge.project_cortex_run_to_vault(
                 res_dict,
                 objective=user_command,
                 event_store=store,
             )
             hippo_path = self.bridge.project_plasticity_to_vault(plasticity)
+            audit_summary = gov.audit_and_calibrate_brain(store, plasticity)
+            gov_out = gov.write_crystalline_dossiers_to_vault(self.bridge.vault_root, audit_summary, event_store=store)
+            self.bridge._write_specialist_neuron_hubs()
             proj["hippocampus_note"] = str(hippo_path)
+            proj["governance_report"] = gov_out["governance_report_path"]
+            proj["dossiers_written"] = gov_out["dossiers_written"]
             self.bridge.update_central_moc(event_store=store, ingestion_report=ing_report)
 
             # 5. Abrir a nota da execução ou o Canvas ao vivo na janela do Obsidian via Local REST API
@@ -285,6 +292,7 @@ class JarvisCognitiveAssistant:
                 },
             }
         finally:
+            gov.close()
             plasticity.close()
             mem_store.close()
             store.close()

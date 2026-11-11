@@ -31,6 +31,7 @@ from core.event_store import EpistemicEventStore
 from core.neuron import CognitiveNeuron
 from core.cortex import FractalCognitiveCortex
 from core.extended_cortex_v3 import ExtendedCognitiveCortexV3, SynapticPlasticityMemory
+from core.meta_governance_layer import SevereMetaGovernanceLayer
 from core.rag_memory import CoALAMemoryStore
 from core.obsidian_bridge import ObsidianVaultBridge, ObsidianLocalRestClient
 from core.jarvis_voice import JarvisCognitiveAssistant, save_local_env
@@ -56,18 +57,24 @@ def sync_obsidian_vault(vault_path: Path = DEFAULT_OBSIDIAN_VAULT) -> Dict[str, 
 
     mem_store = CoALAMemoryStore(db_path=str(DEFAULT_RAG_DB))
     plasticity = SynapticPlasticityMemory(db_path=str(DEFAULT_RAG_DB))
+    gov = SevereMetaGovernanceLayer(db_path=str(DEFAULT_RAG_DB))
     store = EpistemicEventStore(db_path=str(DEFAULT_DB), jsonl_path=str(DEFAULT_JSONL))
     try:
         ingestion = bridge.ingest_vault_knowledge(mem_store)
         exported_events = bridge.sync_event_store_to_vault(store, max_events=50)
         plasticity.harvest_from_event_store(store)
         hippo_path = bridge.project_plasticity_to_vault(plasticity)
+        audit_summary = gov.audit_and_calibrate_brain(store, plasticity)
+        gov_out = gov.write_crystalline_dossiers_to_vault(bridge.vault_root, audit_summary, event_store=store)
+        bridge._write_specialist_neuron_hubs()
         moc_path = bridge.update_central_moc(event_store=store, ingestion_report=ingestion)
-        git_snap = bridge.commit_vault_snapshot("chore(brain-sync): sincronizacao automatica com Cerebro Cognitivo v3.0")
+        git_snap = bridge.commit_vault_snapshot("chore(brain-sync): sincronizacao automatica + dossies cristalinos v3.2")
         return {
             "vault_root": init_info["vault_root"],
             "moc_path": str(moc_path),
             "hippocampus_path": str(hippo_path),
+            "governance_report_path": gov_out["governance_report_path"],
+            "dossiers_written": gov_out["dossiers_written"],
             "architecture_canvas_path": init_info["architecture_canvas_path"],
             "axioms_ingested": ingestion.axioms_ingested,
             "documents_ingested": ingestion.documents_ingested,
@@ -76,6 +83,7 @@ def sync_obsidian_vault(vault_path: Path = DEFAULT_OBSIDIAN_VAULT) -> Dict[str, 
             "vault_git_snapshot": git_snap,
         }
     finally:
+        gov.close()
         plasticity.close()
         mem_store.close()
         store.close()
@@ -207,6 +215,7 @@ def execute_objective_in_cortex(objective: str, inject_fault_mode: str = "none")
             bridge.initialize_vault_structure()
             mem_store = CoALAMemoryStore(db_path=str(DEFAULT_RAG_DB))
             plasticity = SynapticPlasticityMemory(db_path=str(DEFAULT_RAG_DB))
+            gov = SevereMetaGovernanceLayer(db_path=str(DEFAULT_RAG_DB))
             try:
                 ing = bridge.ingest_vault_knowledge(mem_store)
                 proj = bridge.project_cortex_run_to_vault(
@@ -216,9 +225,14 @@ def execute_objective_in_cortex(objective: str, inject_fault_mode: str = "none")
                 )
                 plasticity.harvest_from_event_store(store)
                 hippo_path = bridge.project_plasticity_to_vault(plasticity)
+                audit_summary = gov.audit_and_calibrate_brain(store, plasticity)
+                gov_out = gov.write_crystalline_dossiers_to_vault(bridge.vault_root, audit_summary, event_store=store)
+                bridge._write_specialist_neuron_hubs()
                 proj["hippocampus_note"] = str(hippo_path)
+                proj["governance_report"] = gov_out["governance_report_path"]
+                proj["dossiers_written"] = gov_out["dossiers_written"]
                 bridge.update_central_moc(event_store=store, ingestion_report=ing)
-                bridge.commit_vault_snapshot(f"feat(cortex-v3): {objective[:55]}")
+                bridge.commit_vault_snapshot(f"feat(cortex-v3.2): {objective[:55]}")
                 obsidian_projection = {
                     "vault_root": str(bridge.vault_root),
                     **proj,
@@ -227,6 +241,7 @@ def execute_objective_in_cortex(objective: str, inject_fault_mode: str = "none")
                     "total_chunks_indexed": ing.total_chunks_indexed,
                 }
             finally:
+                gov.close()
                 plasticity.close()
                 mem_store.close()
 
