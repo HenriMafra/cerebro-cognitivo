@@ -30,6 +30,7 @@ from core.obsidian_bridge import (
     resolve_vault_root,
 )
 from core.rag_memory import CoALAMemoryStore
+from core.jarvis_voice import JarvisCognitiveAssistant
 from mcp_brain_server import handle_jsonrpc_request
 
 
@@ -161,6 +162,30 @@ class TestObsidianVaultBridge(unittest.TestCase):
         self.assertFalse(verify_resp["result"]["isError"])
         payload = json.loads(verify_resp["result"]["content"][0]["text"])
         self.assertTrue(payload["chain_integrity_valid"])
+
+    def test_06_jarvis_assistant_end_to_end_and_git_snapshot(self) -> None:
+        """Valida o ciclo completo do JarvisCognitiveAssistant + snapshot Git no Vault."""
+        with tempfile.TemporaryDirectory() as tmp:
+            vault_dir = Path(tmp) / "MY BRAIN"
+            db_file = Path(tmp) / "epistemic.db"
+            jsonl_file = Path(tmp) / "events.jsonl"
+            rag_file = Path(tmp) / "coala.db"
+
+            jarvis = JarvisCognitiveAssistant(
+                db_path=str(db_file),
+                jsonl_path=str(jsonl_file),
+                rag_db_path=str(rag_file),
+                vault_path=vault_dir,
+            )
+            res = jarvis.process_command(
+                "Auditar integridade Ed25519 e memória CoALA no Vault MY BRAIN",
+                open_in_obsidian=False,
+                auto_git_commit=True,
+            )
+            self.assertTrue(res["ok"])
+            self.assertIn("Processamento concluído", res["spoken_response"])
+            self.assertEqual(res["cortex_result"]["status"], "APPROVED")
+            self.assertTrue((vault_dir / ".git").exists())
 
 
 if __name__ == "__main__":

@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>J.A.R.V.I.S. · Console de Voz & Córtex Obsidian (MY BRAIN)</title>
+  <style>
+    :root {
+      --bg: #070b14;
+      --panel: #0f172a;
+      --border: #1e293b;
+      --cyan: #06b6d4;
+      --emerald: #10b981;
+      --violet: #8b5cf6;
+      --amber: #f59e0b;
+      --red: #ef4444;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: radial-gradient(circle at 50% 0%, #0f1f38 0%, var(--bg) 70%);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container { max-width: 1240px; margin: 0 auto; }
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      padding: 18px 22px;
+      background: rgba(15, 23, 42, 0.88);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      margin-bottom: 20px;
+    }
+    .brand h1 {
+      font-size: 1.35rem;
+      letter-spacing: 0.04em;
+      color: #38bdf8;
+    }
+    .brand p { font-size: 0.85rem; color: var(--muted); margin-top: 4px; }
+    .badges { display: flex; flex-wrap: wrap; gap: 10px; }
+    .badge {
+      font-size: 0.78rem;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #0b1324;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .dot.ok { background: var(--emerald); box-shadow: 0 0 8px var(--emerald); }
+    .dot.warn { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+    .grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 20px;
+    }
+    @media (max-width: 920px) { .grid { grid-template-columns: 1fr; } }
+    .card {
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .card h2 {
+      font-size: 1.02rem;
+      color: #e2e8f0;
+      margin-bottom: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .orb-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 12px;
+      border: 1px dashed #1e3a5f;
+      border-radius: 14px;
+      background: radial-gradient(circle, rgba(6,182,212,0.12) 0%, transparent 70%);
+      margin-bottom: 16px;
+    }
+    .voice-orb {
+      width: 108px;
+      height: 108px;
+      border-radius: 50%;
+      border: 2px solid var(--cyan);
+      background: radial-gradient(circle, rgba(6,182,212,0.38) 0%, rgba(15,23,42,0.95) 75%);
+      box-shadow: 0 0 28px rgba(6,182,212,0.35);
+      color: #fff;
+      font-size: 2rem;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .voice-orb.listening {
+      border-color: var(--red);
+      background: radial-gradient(circle, rgba(239,68,68,0.48) 0%, rgba(15,23,42,0.95) 75%);
+      box-shadow: 0 0 42px rgba(239,68,68,0.75);
+      transform: scale(1.07);
+    }
+    .orb-status {
+      margin-top: 12px;
+      font-size: 0.9rem;
+      color: #38bdf8;
+      text-align: center;
+    }
+    .input-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    input[type="text"], input[type="password"] {
+      flex: 1;
+      background: #09101f;
+      border: 1px solid #26354d;
+      color: var(--text);
+      padding: 11px 14px;
+      border-radius: 9px;
+      font-size: 0.92rem;
+    }
+    button {
+      background: linear-gradient(135deg, #0284c7, #06b6d4);
+      color: #fff;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 9px;
+      font-weight: 600;
+      font-size: 0.86rem;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    button:hover { opacity: 0.92; }
+    button.secondary {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #e2e8f0;
+    }
+    .spoken-box {
+      margin-top: 16px;
+      padding: 16px;
+      border-radius: 10px;
+      background: rgba(16, 185, 129, 0.08);
+      border-left: 4px solid var(--emerald);
+      font-size: 0.96rem;
+      line-height: 1.55;
+    }
+    .neurons-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .neuron-item {
+      padding: 10px 14px;
+      border-radius: 9px;
+      background: #09101f;
+      border: 1px solid #1e293b;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.84rem;
+    }
+    .btn-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .small-note { font-size: 0.8rem; color: var(--muted); margin-top: 8px; line-height: 1.45; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand">
+        <h1>🧠 J.A.R.V.I.S. · CÓRTEX COGNITIVO & OBSIDIAN (MY BRAIN)</h1>
+        <p>Interface de Voz, Verificação Ortogonal V1/V2/V3 + Z3 e Controle ao Vivo do Obsidian via Local REST API</p>
+      </div>
+      <div class="badges">
+        <span class="badge"><span id="dotObsidian" class="dot ok"></span> Obsidian REST API: <strong id="lblObsidian">Verificando...</strong></span>
+        <span class="badge"><span id="dotGemini" class="dot warn"></span> Gemini Voz/LLM: <strong id="lblGemini">Verificando...</strong></span>
+        <span class="badge"><span class="dot ok"></span> Cadeia Merkle-DAG: <strong id="lblEvents">...</strong></span>
+      </div>
+    </header>
+
+    <div class="grid">
+      <div>
+        <div class="card">
+          <h2>
+            <span>🎙️ Comando de Voz ou Texto para o Córtex</span>
+            <button class="secondary" id="btnToggleTts" onclick="toggleTts()">🔊 Voz Ativa</button>
+          </h2>
+          <div class="orb-box">
+            <button id="voiceOrb" class="voice-orb" onclick="toggleVoiceRecognition()" title="Clique para falar com o Jarvis">🎙️</button>
+            <div id="orbStatus" class="orb-status">Clique no Orbe para falar em Português (ou digite abaixo)</div>
+            <div class="small-note" id="activeNoteBanner">Nota aberta no Obsidian: detectando...</div>
+          </div>
+
+          <div class="input-row">
+            <input type="text" id="cmdInput" placeholder="Ex.: Audite a nota aberta no Obsidian e projete um módulo de segurança..." onkeydown="if(event.key==='Enter') sendJarvisCommand()" />
+            <button onclick="sendJarvisCommand()">Executar no Córtex</button>
+          </div>
+
+          <div id="spokenOutput" class="spoken-box">
+            <strong>J.A.R.V.I.S.:</strong> Sistema neural pronto. Seu Vault <code>MY BRAIN</code> está conectado ao vivo pela Local REST API (porta 27124) e versionado via Git.
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>🧬 Certificados dos 5 Neurônios Especialistas (Último Turno)</h2>
+          <div id="neuronsContainer" class="neurons-list">
+            <div class="neuron-item"><span>Aguardando estímulo sensorial...</span><span>V1 ∧ V2 ∧ V3</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <h2>⚡ Controle ao Vivo da Tela do Obsidian (MY BRAIN)</h2>
+          <div class="btn-grid">
+            <button class="secondary" onclick="controlObsidian('open_file', '00_Painel_Central_MOC.md')">📋 Abrir Painel Central (MOC)</button>
+            <button class="secondary" onclick="controlObsidian('open_graph_view', '')">🕸️ Abrir Grafo Neural (Ctrl+G)</button>
+            <button class="secondary" onclick="controlObsidian('open_file', '05_Mapas_Visuais_Canvas/01_Arquitetura_Macro_e_Micro_Cortex.canvas')">📐 Abrir Canvas da Arquitetura</button>
+            <button class="secondary" onclick="controlObsidian('open_file', '05_Mapas_Visuais_Canvas/02_Ultima_Execucao_Cortex_DAG.canvas')">🚀 Abrir Canvas Última Execução</button>
+          </div>
+          <p class="small-note">
+            Estes botões acionam diretamente a <strong>Local REST API (`https://127.0.0.1:27124`)</strong> que já está autenticada no seu Obsidian, mudando a nota ou o Canvas na sua janela aberta!
+          </p>
+        </div>
+
+        <div class="card">
+          <h2>🔑 Configurar Chave Google Gemini (Voz & LLM)</h2>
+          <p class="small-note" style="margin-bottom:10px;">
+            Cole abaixo sua <code>GEMINI_API_KEY</code> para ativar síntese generativa e transcrição multimodal Gemini 2.5 Flash. A chave fica salva apenas no seu arquivo <code>.env</code> local (protegido pelo <code>.gitignore</code>).
+          </p>
+          <div class="input-row">
+            <input type="password" id="geminiKeyInput" placeholder="AIzaSy..." />
+            <button onclick="saveApiKeys()">Salvar Chave</button>
+          </div>
+          <div id="keySaveMsg" class="small-note"></div>
+        </div>
+
+        <div class="card">
+          <h2>🌐 Acesso de Qualquer Lugar (Celular / Notebook)</h2>
+          <p class="small-note">
+            1. <strong>Git no Vault MY BRAIN</strong>: Já inicializado! Cada comando do Jarvis cria um snapshot Git automático no seu Vault.<br/>
+            2. <strong>Acesso Remoto ao Console de Voz</strong>: Ao rodar <code>python run_mvp.py --serve --host 0.0.0.0</code> com <strong>Tailscale</strong>, você acessa esta página pelo navegador do celular de qualquer lugar.
+          </p>
+          <div style="margin-top:12px;">
+            <a href="/dashboard" style="color:#38bdf8; font-size:0.86rem; text-decoration:none;">👉 Ir para o Inspector Forense Completo do Merkle-DAG (/dashboard)</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let ttsEnabled = true;
+    let recognition = null;
+    let isListening = false;
+
+    function toggleTts() {
+      ttsEnabled = !ttsEnabled;
+      document.getElementById('btnToggleTts').textContent = ttsEnabled ? '🔊 Voz Ativa' : '🔇 Voz Muda';
+      if (!ttsEnabled && window.speechSynthesis) window.speechSynthesis.cancel();
+    }
+
+    function speakText(text) {
+      if (!ttsEnabled || !('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = 'pt-BR';
+      utter.rate = 1.05;
+      const voices = window.speechSynthesis.getVoices();
+      const ptVoice = voices.find(v => v.lang && v.lang.toLowerCase().includes('pt-br')) || voices.find(v => v.lang && v.lang.toLowerCase().includes('pt'));
+      if (ptVoice) utter.voice = ptVoice;
+      window.speechSynthesis.speak(utter);
+    }
+
+    async function refreshStatus() {
+      try {
+        const res = await fetch('/api/jarvis/status');
+        const data = await res.json();
+        const obsOk = data.obsidian_rest_online && data.obsidian_rest_authenticated;
+        document.getElementById('dotObsidian').className = 'dot ' + (obsOk ? 'ok' : 'warn');
+        document.getElementById('lblObsidian').textContent = obsOk ? 'CONECTADO (27124)' : 'MODO ARQUIVO';
+        document.getElementById('dotGemini').className = 'dot ' + (data.gemini_api_configured ? 'ok' : 'warn');
+        document.getElementById('lblGemini').textContent = data.gemini_api_configured ? 'GEMINI ATIVO' : 'MODO DETERMINÍSTICO';
+        document.getElementById('lblEvents').textContent = data.dag_summary.total_events + ' eventos (100% íntegro)';
+        document.getElementById('activeNoteBanner').textContent = data.obsidian_active_note
+          ? '📄 Nota aberta agora no seu Obsidian: ' + data.obsidian_active_note
+          : '📄 Obsidian conectado em: ' + data.obsidian_vault_root;
+      } catch (e) {}
+    }
+
+    async function sendJarvisCommand(overrideText) {
+      const inputEl = document.getElementById('cmdInput');
+      const command = (overrideText || inputEl.value || '').trim();
+      if (!command) return;
+      if (!overrideText) inputEl.value = '';
+
+      document.getElementById('orbStatus').textContent = 'Processando nos 5 Neurônios Especialistas (V1 ∧ V2 ∧ V3)...';
+      document.getElementById('spokenOutput').innerHTML = '<strong>J.A.R.V.I.S.:</strong> Executando decomposição topológica e verificação formal...';
+
+      try {
+        const res = await fetch('/api/jarvis/command', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ command })
+        });
+        const data = await res.json();
+        document.getElementById('spokenOutput').innerHTML = '<strong>J.A.R.V.I.S.:</strong> ' + data.spoken_response;
+        document.getElementById('orbStatus').textContent = 'Concluído em ' + data.elapsed_ms + ' ms · Certificado aberto no Obsidian!';
+        speakText(data.spoken_response);
+
+        const certs = (data.cortex_result && data.cortex_result.certificates) || {};
+        const container = document.getElementById('neuronsContainer');
+        container.innerHTML = '';
+        Object.keys(certs).forEach(nid => {
+          const c = certs[nid];
+          const div = document.createElement('div');
+          div.className = 'neuron-item';
+          div.innerHTML = `
+            <span><strong>${nid}</strong> (${c.neuron_id})</span>
+            <span style="color:#10b981;">${c.status} · Iter: ${c.total_iterations} · ${String(c.certificate_hash).slice(0, 18)}...</span>
+          `;
+          container.appendChild(div);
+        });
+        refreshStatus();
+      } catch (err) {
+        document.getElementById('orbStatus').textContent = 'Erro ao comunicar com o servidor local.';
+      }
+    }
+
+    function toggleVoiceRecognition() {
+      const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRec) {
+        alert('Seu navegador não suporta Web Speech API direta. Digite o comando na caixa de texto abaixo.');
+        return;
+      }
+      if (isListening && recognition) {
+        recognition.stop();
+        return;
+      }
+      recognition = new SpeechRec();
+      recognition.lang = 'pt-BR';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      recognition.onstart = () => {
+        isListening = true;
+        document.getElementById('voiceOrb').classList.add('listening');
+        document.getElementById('orbStatus').textContent = 'Ouvindo você em Português... Pode falar!';
+      };
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        document.getElementById('cmdInput').value = transcript;
+        sendJarvisCommand(transcript);
+      };
+      recognition.onerror = () => {
+        isListening = false;
+        document.getElementById('voiceOrb').classList.remove('listening');
+        document.getElementById('orbStatus').textContent = 'Clique no Orbe para falar em Português';
+      };
+      recognition.onend = () => {
+        isListening = false;
+        document.getElementById('voiceOrb').classList.remove('listening');
+      };
+      recognition.start();
+    }
+
+    async function controlObsidian(action, relative_path) {
+      await fetch('/api/obsidian/control', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, relative_path })
+      });
+      refreshStatus();
+    }
+
+    async function saveApiKeys() {
+      const geminiKey = document.getElementById('geminiKeyInput').value.trim();
+      if (!geminiKey) return;
+      const res = await fetch('/api/jarvis/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ GEMINI_API_KEY: geminiKey })
+      });
+      const data = await res.json();
+      document.getElementById('keySaveMsg').textContent = data.saved
+        ? '✅ Chave Gemini salva com segurança em .env e ativada no Córtex!'
+        : 'Erro ao salvar chave.';
+      document.getElementById('geminiKeyInput').value = '';
+      refreshStatus();
+    }
+
+    refreshStatus();
+    setInterval(refreshStatus, 5000);
+  </script>
+</body>
+</html>

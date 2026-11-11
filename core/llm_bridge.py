@@ -466,3 +466,38 @@ class CognitiveSynthesisBridge:
             pass
 
         return None
+
+
+def call_gemini_json(
+    system_prompt: str,
+    user_prompt: str,
+    api_key: Optional[str] = None,
+    model: str = "gemini-2.5-flash",
+    timeout_sec: float = 15.0,
+) -> Dict[str, Any]:
+    """
+    Conector nativo zero-dependência para a API Google Gemini (`generateContent` com `responseMimeType: application/json`).
+    """
+    key = (api_key or os.environ.get("GEMINI_API_KEY", "")).strip()
+    if not key:
+        raise ValueError("GEMINI_API_KEY não fornecida.")
+
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}"
+    payload = {
+        "systemInstruction": {"parts": [{"text": system_prompt}]},
+        "contents": [{"role": "user", "parts": [{"text": user_prompt}]}],
+        "generationConfig": {
+            "temperature": 0.15,
+            "responseMimeType": "application/json",
+        },
+    }
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=timeout_sec) as resp:
+        raw = json.loads(resp.read().decode("utf-8"))
+        text_out = raw["candidates"][0]["content"]["parts"][0]["text"]
+        return json.loads(text_out)

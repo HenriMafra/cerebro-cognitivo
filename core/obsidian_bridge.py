@@ -24,6 +24,7 @@ import os
 from pathlib import Path
 import re
 import ssl
+import subprocess
 from typing import Any, Dict, List, Optional, Tuple
 import urllib.error
 import urllib.parse
@@ -1079,29 +1080,105 @@ class ObsidianVaultBridge:
             pass
         return uri
 
+    def commit_vault_snapshot(self, message: str = "chore(brain-sync): snapshot automatico do Cerebro Cognitivo") -> Dict[str, Any]:
+        """
+        Garante que o Vault tenha `.gitignore` seguro (excluindo `workspace.json` e chaves de plugins)
+        e cria um commit Git atômico caso haja mudanças no Vault `MY BRAIN`.
+        """
+        gitignore_path = self.vault_root / ".gitignore"
+        if not gitignore_path.exists():
+            gitignore_path.write_text(
+                "# Ignorar estados voláteis de janela e segredos de plugins\n"
+                ".obsidian/workspace.json\n"
+                ".obsidian/workspace-mobile.json\n"
+                ".obsidian/cache\n"
+                ".obsidian/plugins/*/data.json\n"
+                ".trash/\n"
+                ".DS_Store\n"
+                "Thumbs.db\n",
+                encoding="utf-8",
+            )
+        try:
+            if not (self.vault_root / ".git").exists():
+                subprocess.run(
+                    ["git", "init"],
+                    cwd=str(self.vault_root),
+                    capture_output=True,
+                    text=True,
+                    timeout=5.0,
+                )
+            subprocess.run(
+                ["git", "add", "-A"],
+                cwd=str(self.vault_root),
+                capture_output=True,
+                text=True,
+                timeout=5.0,
+            )
+            status_proc = subprocess.run(
+                ["git", "status", "--porcelain"],
+                cwd=str(self.vault_root),
+                capture_output=True,
+                text=True,
+                timeout=5.0,
+            )
+            if not (status_proc.stdout or "").strip():
+                return {"committed": False, "reason": "working_tree_clean"}
+
+            commit_proc = subprocess.run(
+                ["git", "commit", "-m", message],
+                cwd=str(self.vault_root),
+                capture_output=True,
+                text=True,
+                timeout=5.0,
+            )
+            return {
+                "committed": commit_proc.returncode == 0,
+                "stdout": (commit_proc.stdout or "").strip(),
+            }
+        except Exception as e:
+            return {"committed": False, "error": str(e)}
+
 
 class ObsidianLocalRestClient:
     """
     Cliente nativo zero-dependência para o plugin comunitário `Local REST API` do Obsidian
     (por padrão em `https://127.0.0.1:27124` ou `http://127.0.0.1:27123`).
 
-    Permite controle em tempo real da interface do Obsidian:
-    - Ler a nota que o usuário está visualizando agora (`get_active_note()`)
-    - Abrir notas ou arquivos `.canvas` diretamente na janela ativa (`open_file_in_ui()`)
-    - Disparar comandos internos da UI do Obsidian, como abrir o Graph View (`execute_command('graph:open')`)
-    - Buscar pelo motor interno do Obsidian (`search_simple()`)
+    Descobre automaticamente a `apiKey` e a `port` em `.obsidian/plugins/obsidian-local-rest-api/data.json`
+    quando o Vault `MY BRAIN` está presente no disco!
     """
 
     def __init__(
         self,
         api_key: Optional[str] = None,
         base_url: Optional[str] = None,
+        vault_path: Optional[str | Path] = None,
         timeout_sec: float = 3.0,
     ) -> None:
-        self.api_key = (api_key or os.environ.get("OBSIDIAN_API_KEY", "")).strip()
+        discovered_key = ""
+        discovered_url = ""
+        target_vault = vault_path or Path(r"C:\Users\henri.mafra\Documents\MY BRAIN")
+        try:
+            v_root = resolve_vault_root(target_vault)
+            plugin_cfg = v_root / ".obsidian" / "plugins" / "obsidian-local-rest-api" / "data.json"
+            if plugin_cfg.exists():
+                cfg_data = json.loads(plugin_cfg.read_text(encoding="utf-8"))
+                discovered_key = str(cfg_data.get("apiKey", "")).strip()
+                port = cfg_data.get("port", 27124)
+                discovered_url = f"https://127.0.0.1:{port}"
+        except Exception:
+            pass
+
+        self.api_key = (
+            api_key
+            or os.environ.get("OBSIDIAN_API_KEY", "")
+            or discovered_key
+        ).strip()
         self.base_url = (
             base_url
-            or os.environ.get("OBSIDIAN_REST_URL", "https://127.0.0.1:27124")
+            or os.environ.get("OBSIDIAN_REST_URL", "")
+            or discovered_url
+            or "https://127.0.0.1:27124"
         ).rstrip("/")
         self.timeout_sec = timeout_sec
         # O plugin Local REST API usa certificado auto-assinado em localhost:27124

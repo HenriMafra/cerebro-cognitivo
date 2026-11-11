@@ -1,6 +1,6 @@
+# Segredos e variáveis de ambiente (JAMAIS versionar chaves de API)
+.env
+*.env
 __pycache__/
-*.py[cod]
-*$py.class
-*.db-shm
-*.db-wal
-.venv/
+*.pyc
+.pytest_cache/

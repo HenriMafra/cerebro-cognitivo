@@ -31,7 +31,8 @@ from core.event_store import EpistemicEventStore
 from core.neuron import CognitiveNeuron
 from core.cortex import FractalCognitiveCortex
 from core.rag_memory import CoALAMemoryStore
-from core.obsidian_bridge import ObsidianVaultBridge
+from core.obsidian_bridge import ObsidianVaultBridge, ObsidianLocalRestClient
+from core.jarvis_voice import JarvisCognitiveAssistant, save_local_env
 from dashboard.inspector_generator import generate_telemetry_dashboard
 from tests.chaos_benchmark import run_chaos_benchmark
 
@@ -58,6 +59,7 @@ def sync_obsidian_vault(vault_path: Path = DEFAULT_OBSIDIAN_VAULT) -> Dict[str, 
         ingestion = bridge.ingest_vault_knowledge(mem_store)
         exported_events = bridge.sync_event_store_to_vault(store, max_events=50)
         moc_path = bridge.update_central_moc(event_store=store, ingestion_report=ingestion)
+        git_snap = bridge.commit_vault_snapshot("chore(brain-sync): sincronizacao automatica com Cerebro Cognitivo")
         return {
             "vault_root": init_info["vault_root"],
             "moc_path": str(moc_path),
@@ -66,6 +68,7 @@ def sync_obsidian_vault(vault_path: Path = DEFAULT_OBSIDIAN_VAULT) -> Dict[str, 
             "documents_ingested": ingestion.documents_ingested,
             "total_chunks_indexed": ingestion.total_chunks_indexed,
             "exported_events": exported_events,
+            "vault_git_snapshot": git_snap,
         }
     finally:
         mem_store.close()
@@ -287,7 +290,15 @@ class MVPStudioHandler(BaseHTTPRequestHandler):
         self.wfile.write(raw)
 
     def do_GET(self) -> None:
-        if self.path in ("/", "/index.html", "/dashboard"):
+        if self.path in ("/", "/jarvis"):
+            jarvis_html_path = PROJECT_ROOT / "dashboard" / "jarvis_console.html"
+            raw = jarvis_html_path.read_text(encoding="utf-8").encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(raw)))
+            self.end_headers()
+            self.wfile.write(raw)
+        elif self.path in ("/index.html", "/dashboard"):
             dash_path = PROJECT_ROOT / "dashboard" / "inspector_telemetria.html"
             if not dash_path.exists():
                 run_chaos_benchmark()
@@ -298,6 +309,14 @@ class MVPStudioHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Length", str(len(raw)))
             self.end_headers()
             self.wfile.write(raw)
+        elif self.path == "/api/jarvis/status":
+            jarvis = JarvisCognitiveAssistant(
+                db_path=str(DEFAULT_DB),
+                jsonl_path=str(DEFAULT_JSONL),
+                rag_db_path=str(DEFAULT_RAG_DB),
+                vault_path=DEFAULT_OBSIDIAN_VAULT,
+            )
+            self._send_json(jarvis.get_system_status())
         elif self.path == "/api/status":
             store = EpistemicEventStore(db_path=str(DEFAULT_DB), jsonl_path=str(DEFAULT_JSONL))
             try:
@@ -309,13 +328,37 @@ class MVPStudioHandler(BaseHTTPRequestHandler):
             self.send_error(404, "Rota nao encontrada")
 
     def do_POST(self) -> None:
+        length = int(self.headers.get("Content-Length", "0"))
+        body = json.loads(self.rfile.read(length).decode("utf-8") or "{}")
         if self.path == "/api/execute":
-            length = int(self.headers.get("Content-Length", "0"))
-            body = json.loads(self.rfile.read(length).decode("utf-8") or "{}")
             objective = body.get("objective", "Validar invariantes formais do sistema")
             fault_mode = body.get("fault_mode", "none")
             out = execute_objective_in_cortex(objective, inject_fault_mode=fault_mode)
             self._send_json(out)
+        elif self.path == "/api/jarvis/command":
+            command = body.get("command", "Auditar nota ativa no Obsidian")
+            jarvis = JarvisCognitiveAssistant(
+                db_path=str(DEFAULT_DB),
+                jsonl_path=str(DEFAULT_JSONL),
+                rag_db_path=str(DEFAULT_RAG_DB),
+                vault_path=DEFAULT_OBSIDIAN_VAULT,
+            )
+            self._send_json(jarvis.process_command(command))
+        elif self.path == "/api/jarvis/config":
+            saved = save_local_env(body)
+            self._send_json(saved)
+        elif self.path == "/api/obsidian/control":
+            action = body.get("action", "check_rest_api")
+            rel_path = body.get("relative_path", "00_Painel_Central_MOC.md")
+            rest = ObsidianLocalRestClient(vault_path=DEFAULT_OBSIDIAN_VAULT)
+            if action == "open_graph_view":
+                self._send_json(rest.execute_command("graph:open"))
+            elif action == "open_file":
+                self._send_json(rest.open_file_in_ui(rel_path))
+            elif action == "get_active_note":
+                self._send_json(rest.get_active_note())
+            else:
+                self._send_json(rest.check_status())
         else:
             self.send_error(404, "Rota POST nao encontrada")
 
@@ -338,9 +381,16 @@ def main() -> None:
         default=str(DEFAULT_OBSIDIAN_VAULT),
         help="Caminho do Vault do Obsidian (padrão: C:\\Users\\henri.mafra\\Documents\\MY BRAIN)",
     )
-    parser.add_argument("--serve", action="store_true", help="Inicia o servidor web local na porta 8765")
+    parser.add_argument("--serve", action="store_true", help="Inicia o servidor web J.A.R.V.I.S. + Studio na porta 8765")
+    parser.add_argument("--host", type=str, default="127.0.0.1", help="Host HTTP (use 0.0.0.0 para acesso remoto via Tailscale/LAN)")
     parser.add_argument("--port", type=int, default=8765, help="Porta HTTP para o modo --serve (padrão: 8765)")
+    parser.add_argument("--set-gemini-key", type=str, default=None, help="Salva a GEMINI_API_KEY no arquivo .env local")
     args = parser.parse_args()
+
+    if args.set_gemini_key:
+        save_local_env({"GEMINI_API_KEY": args.set_gemini_key})
+        print(" [OK] GEMINI_API_KEY salva com segurança em .env!")
+        return
 
     if args.sync_obsidian:
         sync_info = sync_obsidian_vault(Path(args.obsidian_vault))
@@ -366,9 +416,9 @@ def main() -> None:
         return
 
     if args.serve:
-        server = HTTPServer(("127.0.0.1", args.port), MVPStudioHandler)
-        url = f"http://127.0.0.1:{args.port}/"
-        print(f"Servidor MVP ativo em: {url} (Pressione Ctrl+C para encerrar)")
+        server = HTTPServer((args.host, args.port), MVPStudioHandler)
+        url = f"http://127.0.0.1:{args.port}/jarvis"
+        print(f"Console de Voz J.A.R.V.I.S. ativo em: {url} (bind={args.host}:{args.port} · Ctrl+C para encerrar)")
         try:
             webbrowser.open(url)
         except Exception:
