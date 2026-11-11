@@ -104,6 +104,50 @@ class TestExtendedCognitiveBrainV3(unittest.TestCase):
             finally:
                 plasticity.close()
 
+    def test_05_dynamic_neurogenesis_spawns_and_reuses_distant_domain_neuron(self) -> None:
+        """
+        Valida que um assunto distante dos 10 especialistas atuais dispara a Neurogênese Dinâmica,
+        cria um 11º especialista persistente + nota no Obsidian, e o reutiliza em chamadas futuras!
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            vault_dir = Path(tmp) / "MY BRAIN"
+            bridge = ObsidianVaultBridge(vault_dir)
+            bridge.initialize_vault_structure()
+
+            store = EpistemicEventStore(":memory:")
+            plasticity = SynapticPlasticityMemory(":memory:")
+            try:
+                cortex = ExtendedCognitiveCortexV3(event_store=store, plasticity_memory=plasticity)
+
+                # 1ª chamada sobre domínio distante (Bioquímica & Dobramento de Proteínas)
+                distant_prompt = "Modelar bioquimica farmacologica de dobramento molecular de proteinas"
+                res1 = cortex.process_v3(distant_prompt)
+                self.assertEqual(res1.status, VerdictStatus.APPROVED)
+                self.assertEqual(res1.total_nodes, 11)  # 10 nativos + 1 nascido por Neurogênese!
+
+                spawned_list = plasticity.list_spawned_neurons()
+                self.assertEqual(len(spawned_list), 1)
+                dyn_spec = spawned_list[0]
+                self.assertEqual(dyn_spec.activations_count, 1)
+
+                # Projetar no Obsidian e verificar se a nota do novo neurônio nasceu em 03_Neuronios_Especialistas
+                bridge.project_cortex_run_to_vault(res1, objective=distant_prompt, event_store=store)
+                dyn_note = bridge.vault_root / bridge.DIR_NEURONS / f"{dyn_spec.note_name}.md"
+                self.assertTrue(dyn_note.exists(), f"Nota do neurônio dinâmico deveria existir: {dyn_note}")
+
+                # 2ª chamada sobre o mesmo domínio distante -> deve REUTILIZAR sem duplicar!
+                sp2, newly_spawned = plasticity.detect_or_spawn_domain_neuron(
+                    "Analisar dobramento molecular de proteinas na bioquimica"
+                )
+                self.assertIsNotNone(sp2)
+                self.assertFalse(newly_spawned)
+                self.assertEqual(sp2.neuron_id, dyn_spec.neuron_id)
+                self.assertEqual(sp2.activations_count, 2)
+                self.assertEqual(len(plasticity.list_spawned_neurons()), 1)
+            finally:
+                plasticity.close()
+                store.close()
+
 
 if __name__ == "__main__":
     unittest.main()

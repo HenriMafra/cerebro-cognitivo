@@ -14,15 +14,18 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import hashlib
 import json
+import re
 import sqlite3
 import threading
 import time
-from typing import Any, Dict, List, Optional, Tuple
+import unicodedata
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from .budget import HardBudget
 from .cortex import CortexExecutionResult, DAGTaskNode, ExecutionDAG, FractalCognitiveCortex
 from .event_store import EpistemicEventStore
 from .neuron import CognitiveNeuron
+from .obsidian_bridge import NEURON_HUB_MAP
 from .schemas import (
     Claim,
     HypothesisPayload,
@@ -134,6 +137,48 @@ class SynapticRule:
     created_utc: str
 
 
+@dataclass(frozen=True)
+class SpawnedNeuronSpec:
+    """Especificação persistente de um Neurônio Especialista criado por Neurogênese Dinâmica."""
+    neuron_id: str
+    domain_slug: str
+    title: str
+    specialty: str
+    lobe: str
+    note_name: str
+    keywords: List[str]
+    activations_count: int
+    created_utc: str
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "neuron_id": self.neuron_id,
+            "domain_slug": self.domain_slug,
+            "title": self.title,
+            "specialty": self.specialty,
+            "lobe": self.lobe,
+            "note_name": self.note_name,
+            "keywords": self.keywords,
+            "activations_count": self.activations_count,
+            "created_utc": self.created_utc,
+        }
+
+
+_GENERIC_STOPWORDS: Set[str] = {
+    "para", "como", "sobre", "pelo", "pela", "pelos", "pelas", "este", "esta",
+    "isso", "aquilo", "fazer", "criar", "gerar", "analisar", "avaliar", "explicar",
+    "qual", "quais", "quando", "onde", "porque", "entre", "dentro", "fora",
+    "sistema", "modulo", "projeto", "tarefa", "missao", "objetivo", "estudo",
+    "completo", "completa", "usando", "partir", "forma", "modo", "novo", "nova",
+    "todos", "todas", "cada", "mais", "menos", "muito", "pouco", "outro", "outra",
+}
+
+
+def _normalize_token(word: str) -> str:
+    nfkd = unicodedata.normalize("NFKD", word.lower().strip())
+    return "".join(c for c in nfkd if not unicodedata.combining(c))
+
+
 class SynapticPlasticityMemory:
     """
     Hipocampo Digital (Memória de Plasticidade Sináptica de Longo Prazo).
@@ -164,6 +209,18 @@ class SynapticPlasticityMemory:
                     created_utc TEXT NOT NULL
                 );
                 CREATE INDEX IF NOT EXISTS idx_synaptic_neuron ON synaptic_rules(neuron_id);
+
+                CREATE TABLE IF NOT EXISTS spawned_neurons (
+                    neuron_id TEXT PRIMARY KEY,
+                    domain_slug TEXT UNIQUE NOT NULL,
+                    title TEXT NOT NULL,
+                    specialty TEXT NOT NULL,
+                    lobe TEXT NOT NULL,
+                    note_name TEXT NOT NULL,
+                    keywords_json TEXT NOT NULL,
+                    activations_count INTEGER NOT NULL DEFAULT 1,
+                    created_utc TEXT NOT NULL
+                );
                 """
             )
             self._conn.commit()
@@ -279,6 +336,132 @@ class SynapticPlasticityMemory:
                     harvested += 1
         return harvested
 
+    def list_spawned_neurons(self) -> List[SpawnedNeuronSpec]:
+        """Lista todos os neurônios especialistas criados por Neurogênese Dinâmica e salvos no SQLite."""
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT * FROM spawned_neurons ORDER BY created_utc ASC;"
+            ).fetchall()
+            return [
+                SpawnedNeuronSpec(
+                    neuron_id=r["neuron_id"],
+                    domain_slug=r["domain_slug"],
+                    title=r["title"],
+                    specialty=r["specialty"],
+                    lobe=r["lobe"],
+                    note_name=r["note_name"],
+                    keywords=json.loads(r["keywords_json"]),
+                    activations_count=int(r["activations_count"]),
+                    created_utc=r["created_utc"],
+                )
+                for r in rows
+            ]
+
+    def detect_or_spawn_domain_neuron(self, objective: str) -> Tuple[Optional[SpawnedNeuronSpec], bool]:
+        """
+        Motor de Neurogênese Dinâmica Controlada por Distância Semântica:
+        1. Extrai os tokens substantivos do objetivo.
+        2. Verifica se os 10 especialistas nativos cobrem o domínio.
+        3. Verifica se algum neurônio dinâmico já criado cobre o domínio (se sim, reutiliza e incrementa ativação!).
+        4. Se o domínio for distante/inédito ($S_{cov} == 0$), cria, persiste e registra um novo Neurônio Especialista!
+        """
+        raw_words = re.findall(r"[a-zA-ZÀ-ÿ]{5,}", objective)
+        norm_tokens: List[str] = []
+        for w in raw_words:
+            nw = _normalize_token(w)
+            if nw and nw not in _GENERIC_STOPWORDS and nw not in norm_tokens:
+                norm_tokens.append(nw)
+
+        if not norm_tokens:
+            return None, False
+
+        # 1. Verifica cobertura pelos 10 especialistas canônicos
+        canonical_keywords: Set[str] = set()
+        for spec in EXTENDED_SPECIALISTS_SPEC:
+            for kw in spec["keywords"]:
+                canonical_keywords.add(_normalize_token(kw))
+
+        covered_by_canonical = any(
+            any(tok.startswith(ck[:5]) or ck.startswith(tok[:5]) for ck in canonical_keywords if len(ck) >= 5)
+            or tok in canonical_keywords
+            for tok in norm_tokens
+        )
+
+        # 2. Verifica cobertura pelos neurônios dinâmicos já nascidos anteriormente
+        existing_spawned = self.list_spawned_neurons()
+        for sp in existing_spawned:
+            sp_kws = {_normalize_token(k) for k in sp.keywords}
+            if any(
+                tok in sp_kws
+                or any(tok.startswith(sk[:5]) or sk.startswith(tok[:5]) for sk in sp_kws if len(sk) >= 5)
+                for tok in norm_tokens
+            ):
+                with self._lock:
+                    self._conn.execute(
+                        "UPDATE spawned_neurons SET activations_count = activations_count + 1 WHERE neuron_id = ?;",
+                        (sp.neuron_id,),
+                    )
+                    self._conn.commit()
+                updated = SpawnedNeuronSpec(
+                    neuron_id=sp.neuron_id,
+                    domain_slug=sp.domain_slug,
+                    title=sp.title,
+                    specialty=sp.specialty,
+                    lobe=sp.lobe,
+                    note_name=sp.note_name,
+                    keywords=sp.keywords,
+                    activations_count=sp.activations_count + 1,
+                    created_utc=sp.created_utc,
+                )
+                return updated, False
+
+        if covered_by_canonical:
+            return None, False
+
+        # 3. Domínio Inédito Detectado -> Neurogênese Dinâmica!
+        domain_terms = norm_tokens[:3]
+        domain_slug = "_".join(domain_terms)[:36]
+        neuron_id = f"neuron_dyn_{domain_slug}"
+        pretty_domain = " & ".join(t.capitalize() for t in domain_terms)
+        note_name = f"Neuronio_Dinamico_{domain_slug}"
+        title = f"Neurônio Dinâmico (Neurogênese) — Especialista em {pretty_domain}"
+        specialty = f"Especialista Autogerado em {pretty_domain} (Domínio Epistêmico Sob Demanda)"
+        lobe = "Neocórtex de Expansão Dinâmica (Neurogênese)"
+        now = utc_now_iso()
+
+        with self._lock:
+            self._conn.execute(
+                """
+                INSERT OR REPLACE INTO spawned_neurons(
+                    neuron_id, domain_slug, title, specialty, lobe, note_name, keywords_json, activations_count, created_utc
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?);
+                """,
+                (
+                    neuron_id,
+                    domain_slug,
+                    title,
+                    specialty,
+                    lobe,
+                    note_name,
+                    json.dumps(norm_tokens[:8], ensure_ascii=False),
+                    now,
+                ),
+            )
+            self._conn.commit()
+
+        new_spec = SpawnedNeuronSpec(
+            neuron_id=neuron_id,
+            domain_slug=domain_slug,
+            title=title,
+            specialty=specialty,
+            lobe=lobe,
+            note_name=note_name,
+            keywords=norm_tokens[:8],
+            activations_count=1,
+            created_utc=now,
+        )
+        return new_spec, True
+
     def close(self) -> None:
         with self._lock:
             self._conn.close()
@@ -303,7 +486,7 @@ class ExtendedCognitiveCortexV3(FractalCognitiveCortex):
         self._register_extended_v3_specialists()
 
     def _register_extended_v3_specialists(self) -> None:
-        """Registra todos os 10 Neurônios Especialistas dos 4 Lobos Corticais."""
+        """Registra os 10 Neurônios Especialistas nativos + todos os Neurônios criados por Neurogênese."""
         for spec in EXTENDED_SPECIALISTS_SPEC:
             nid = spec["neuron_id"]
             if nid not in self.specialist_neurons:
@@ -312,6 +495,28 @@ class ExtendedCognitiveCortexV3(FractalCognitiveCortex):
                     specialty=spec["specialty"],
                     event_store=self.event_store,
                 )
+        for sp in self.plasticity_memory.list_spawned_neurons():
+            self._bind_spawned_neuron(sp)
+
+    def _bind_spawned_neuron(self, sp: SpawnedNeuronSpec) -> None:
+        """Registra um neurônio dinâmico no Córtex em memória e no mapa global do Obsidian."""
+        if sp.neuron_id not in self.specialist_neurons:
+            self.specialist_neurons[sp.neuron_id] = CognitiveNeuron(
+                neuron_id=sp.neuron_id,
+                specialty=sp.specialty,
+                event_store=self.event_store,
+            )
+        NEURON_HUB_MAP[sp.neuron_id] = {
+            "note_name": sp.note_name,
+            "title": sp.title,
+            "specialty": sp.specialty,
+            "wave": 2,
+            "downstream": [
+                "Neuronio_09_Metacognicao_e_Calibracao_Epistemica",
+                "Neuronio_10_Hipocampo_Consolidacao_Sinaptica",
+                "Neuronio_05_Semantica_e_Didatica",
+            ],
+        }
 
     def compile_extended_dag(
         self,
@@ -347,13 +552,44 @@ class ExtendedCognitiveCortexV3(FractalCognitiveCortex):
                 )
             )
 
-        # Onda 2: Engenharia de Sistemas, Estratégia/Risco e Inferência Causal/Contrafactual
+        # Onda 2: Engenharia de Sistemas, Estratégia/Risco, Inferência Causal + Neurônio Dinâmico (se aplicável)
         wave2_ids = ["task_systems_engineering", "task_strategy_risk", "task_causal_counterfactual"]
         wave2_neurons = [
             ("task_systems_engineering", "neuron_systems_engineering", f"Sintetizar e validar arquitetura e código em Sandbox V2 para: {objective}"),
             ("task_strategy_risk", "neuron_strategy_risk", f"Modelar riscos BFT, limites de orçamento e contenção de falhas para: {objective}"),
             ("task_causal_counterfactual", "neuron_causal_counterfactual", f"Executar análise de causa-raiz e simulação contrafactual (Do-Calculus) para: {objective}"),
         ]
+
+        # Avalia Neurogênese Dinâmica para assuntos distantes dos 10 especialistas atuais
+        spawned_spec, was_newly_spawned = self.plasticity_memory.detect_or_spawn_domain_neuron(objective)
+        if spawned_spec is not None:
+            self._bind_spawned_neuron(spawned_spec)
+            dyn_task_id = f"task_dyn_{spawned_spec.domain_slug[:22]}"
+            wave2_ids.append(dyn_task_id)
+            wave2_neurons.append(
+                (
+                    dyn_task_id,
+                    spawned_spec.neuron_id,
+                    f"[{spawned_spec.specialty}] Formular e verificar hipótese de domínio específico para: {objective}",
+                )
+            )
+            dag.metadata["neurogenesis_neuron_id"] = spawned_spec.neuron_id
+            dag.metadata["neurogenesis_newly_spawned"] = was_newly_spawned
+            if was_newly_spawned and self.event_store is not None:
+                head = self.event_store.get_branch_head("main")
+                self.event_store.record_event(
+                    neuron_id=spawned_spec.neuron_id,
+                    subagent_role="neurogenesis_engine",
+                    event_type="NEUROGENESIS_SPAWNED",
+                    epistemic_state=spawned_spec.to_dict(),
+                    delta_changes={"spawned_neuron_id": spawned_spec.neuron_id, "domain_slug": spawned_spec.domain_slug},
+                    verdict="APPROVED",
+                    confidence_score=1.0,
+                    cycle_iteration=1,
+                    parent_event_id=head.event_id if head else None,
+                    branch_id="main",
+                )
+
         for node_id, neuron_id, intent in wave2_neurons:
             learned_rules = [r.rule_text for r in self.plasticity_memory.get_rules_for_neuron(neuron_id, limit=4)]
             dag.add_node(

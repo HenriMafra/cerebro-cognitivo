@@ -589,6 +589,7 @@ class ObsidianVaultBridge:
         - Atualiza o `00_Painel_Central_MOC.md`
         """
         self._ensure_directories()
+        self._write_specialist_neuron_hubs()
         res_dict = cortex_result.to_dict() if hasattr(cortex_result, "to_dict") else dict(cortex_result)
 
         dag_id = res_dict.get("dag_id", "dag_live")
@@ -1033,6 +1034,7 @@ class ObsidianVaultBridge:
 
         axiom_files = sorted((self.vault_root / self.DIR_AXIOMS).glob("*.md"))
         kb_files = sorted((self.vault_root / self.DIR_SEMANTIC).glob("*.md"))
+        dyn_neuron_files = sorted((self.vault_root / self.DIR_NEURONS).glob("Neuronio_Dinamico_*.md"))
         exec_files = sorted(
             (self.vault_root / self.DIR_EXECUTIONS).glob("Execucao_*.md"),
             key=lambda p: p.stat().st_mtime,
@@ -1042,6 +1044,11 @@ class ObsidianVaultBridge:
 
         axioms_list_md = "\n".join(f"- [[{f.stem}]]" for f in axiom_files) or "- *(Nenhum axioma)*"
         kb_list_md = "\n".join(f"- [[{f.stem}]]" for f in kb_files) or "- *(Nenhum documento)*"
+        dyn_neurons_md = (
+            "\n".join(f"- [[{f.stem}]] *(Auto-gerado por Neurogênese)*" for f in dyn_neuron_files)
+            if dyn_neuron_files
+            else "- *(Nenhum neurônio dinâmico criado ainda — fale sobre um tema inédito para acionar a Neurogênese!)*"
+        )
         exec_list_md = "\n".join(f"- [[{f.stem}]]" for f in exec_files[:10]) or "- *(Nenhuma execução registrada)*"
         events_list_md = "\n".join(f"- [[{f.stem}]]" for f in rollback_events) or "- *(Nenhum evento exportado)*"
 
@@ -1094,6 +1101,8 @@ class ObsidianVaultBridge:
             "   - [[Neuronio_05_Semantica_e_Didatica]] *(Lobo Temporal de Síntese)*\n"
             "5. **Onda 4 (Veredito Córtex Global)**:\n"
             "   - [[Neuronio_06_Convergencia_e_Sintese]]\n\n"
+            "### ✨ Neocórtex Dinâmico (Neurônios Criados por Neurogênese Sob Demanda)\n\n"
+            f"{dyn_neurons_md}\n\n"
             "---\n\n"
             "## 💎 Axiomas do Usuário (`01_Axiomas_do_Usuario/`)\n"
             "*Qualquer nota criada nesta pasta é ingerida como `AXIOM_USER` inegociável pelo Cérebro:*\n\n"
