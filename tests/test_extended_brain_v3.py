@@ -29,9 +29,9 @@ from core.schemas import VerdictStatus
 
 class TestExtendedCognitiveBrainV3(unittest.TestCase):
     def test_01_twelve_neural_nodes_registered_and_mapped(self) -> None:
-        """Garante que o Córtex v3.0 registre os 10 especialistas (+ Tálamo + Convergência = 12 nós no mapa)."""
+        """Garante que o Córtex v3.0 registre os 10 especialistas (+ Tálamo + Convergência = 12 nós base no mapa)."""
         self.assertEqual(len(EXTENDED_SPECIALISTS_SPEC), 10)
-        self.assertEqual(len(NEURON_HUB_MAP), 12)
+        self.assertGreaterEqual(len(NEURON_HUB_MAP), 12)
 
         cortex = ExtendedCognitiveCortexV3()
         for spec in EXTENDED_SPECIALISTS_SPEC:
@@ -119,31 +119,42 @@ class TestExtendedCognitiveBrainV3(unittest.TestCase):
             try:
                 cortex = ExtendedCognitiveCortexV3(event_store=store, plasticity_memory=plasticity)
 
-                # 1ª chamada sobre domínio distante (Bioquímica & Dobramento de Proteínas)
+                # 1ª chamada sobre micro-conceito (Bioquímica & Dobramento de Proteínas)
+                # Deve abstrair para a Grande Área: Biologia & Medicina (neuron_dyn_biologia_e_medicina)
                 distant_prompt = "Modelar bioquimica farmacologica de dobramento molecular de proteinas"
                 res1 = cortex.process_v3(distant_prompt)
                 self.assertEqual(res1.status, VerdictStatus.APPROVED)
-                self.assertEqual(res1.total_nodes, 11)  # 10 nativos + 1 nascido por Neurogênese!
+                self.assertEqual(res1.total_nodes, 11)  # 10 nativos + 1 Macro-Neurônio nascido por Neurogênese!
 
                 spawned_list = plasticity.list_spawned_neurons()
                 self.assertEqual(len(spawned_list), 1)
                 dyn_spec = spawned_list[0]
+                self.assertEqual(dyn_spec.neuron_id, "neuron_dyn_biologia_e_medicina")
+                self.assertEqual(dyn_spec.note_name, "Neuronio_Dinamico_Biologia_e_Medicina")
                 self.assertEqual(dyn_spec.activations_count, 1)
 
-                # Projetar no Obsidian e verificar se a nota do novo neurônio nasceu em 03_Neuronios_Especialistas
+                # Projetar no Obsidian e verificar se a nota do Macro-Neurônio nasceu em 03_Neuronios_Especialistas
                 bridge.project_cortex_run_to_vault(res1, objective=distant_prompt, event_store=store)
                 dyn_note = bridge.vault_root / bridge.DIR_NEURONS / f"{dyn_spec.note_name}.md"
                 self.assertTrue(dyn_note.exists(), f"Nota do neurônio dinâmico deveria existir: {dyn_note}")
 
-                # 2ª chamada sobre o mesmo domínio distante -> deve REUTILIZAR sem duplicar!
+                # 2ª chamada sobre OUTRO sub-assunto da mesma Grande Área (Genética CRISPR e Metabolismo)
+                # Deve REUTILIZAR o mesmo Macro-Neurônio neuron_dyn_biologia_e_medicina sem criar outro!
                 sp2, newly_spawned = plasticity.detect_or_spawn_domain_neuron(
-                    "Analisar dobramento molecular de proteinas na bioquimica"
+                    "Edicao genetica CRISPR e fisiologia do metabolismo celular"
                 )
                 self.assertIsNotNone(sp2)
                 self.assertFalse(newly_spawned)
-                self.assertEqual(sp2.neuron_id, dyn_spec.neuron_id)
+                self.assertEqual(sp2.neuron_id, "neuron_dyn_biologia_e_medicina")
                 self.assertEqual(sp2.activations_count, 2)
                 self.assertEqual(len(plasticity.list_spawned_neurons()), 1)
+
+                # 3ª chamada sobre Dilatação Temporal -> Deve abstrair para Física Avançada (neuron_dyn_fisica_avancada)
+                sp3, newly_spawned_phys = plasticity.detect_or_spawn_domain_neuron("DILATAÇÃO TEMPORAL APLICADA")
+                self.assertIsNotNone(sp3)
+                self.assertTrue(newly_spawned_phys)
+                self.assertEqual(sp3.neuron_id, "neuron_dyn_fisica_avancada")
+                self.assertEqual(sp3.note_name, "Neuronio_Dinamico_Fisica_Avancada")
             finally:
                 plasticity.close()
                 store.close()

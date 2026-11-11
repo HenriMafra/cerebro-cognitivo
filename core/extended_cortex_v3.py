@@ -171,7 +171,139 @@ _GENERIC_STOPWORDS: Set[str] = {
     "sistema", "modulo", "projeto", "tarefa", "missao", "objetivo", "estudo",
     "completo", "completa", "usando", "partir", "forma", "modo", "novo", "nova",
     "todos", "todas", "cada", "mais", "menos", "muito", "pouco", "outro", "outra",
+    "aplicada", "aplicado", "avancada", "avancado", "geral", "especial", "basico",
 }
+
+
+MACRO_ONTOLOGY_TAXONOMY: List[Dict[str, Any]] = [
+    {
+        "domain_slug": "fisica_avancada",
+        "note_name": "Neuronio_Dinamico_Fisica_Avancada",
+        "title": "Neurônio Especialista (Neurogênese) — Física Avançada, Relatividade & Mecânica Quântica",
+        "specialty": "Física Teórica e Aplicada, Relatividade (Restrita/Geral), Mecânica Quântica, Termodinâmica e Astrofísica",
+        "lobe": "Neocórtex Científico — Ciências Físicas",
+        "seed_keywords": [
+            "fisica", "dilatacao", "temporal", "relatividade", "relativistica", "lorentz",
+            "schwarzschild", "quantica", "quantico", "termodinamica", "eletromagnetismo",
+            "astrofisica", "cosmologia", "gravitacional", "gravitacao", "espaco-tempo",
+            "nuclear", "particulas", "foton", "fotons", "optica", "schrodinger", "entropia",
+        ],
+    },
+    {
+        "domain_slug": "biologia_e_medicina",
+        "note_name": "Neuronio_Dinamico_Biologia_e_Medicina",
+        "title": "Neurônio Especialista (Neurogênese) — Ciências Biológicas, Bioquímica & Medicina",
+        "specialty": "Bioquímica, Biologia Molecular, Dobramento de Proteínas, Genômica, Farmacologia e Fisiologia",
+        "lobe": "Neocórtex Científico — Ciências da Vida",
+        "seed_keywords": [
+            "biologia", "bioquimica", "farmacologica", "farmacologia", "proteina", "proteinas",
+            "dobramento", "molecular", "genetica", "genomica", "crispr", "medicina", "clinica",
+            "celular", "metabolismo", "imunologia", "neurobiologia", "fisiologia", "enzima",
+        ],
+    },
+    {
+        "domain_slug": "economia_e_financas",
+        "note_name": "Neuronio_Dinamico_Economia_e_Financas",
+        "title": "Neurônio Especialista (Neurogênese) — Economia, Finanças Quantitativas & Mercados",
+        "specialty": "Macroeconomia, Microeconomia, Finanças Quantitativas, Derivativos, Valuation e Liquidez",
+        "lobe": "Neocórtex Socioeconômico — Economia & Mercados",
+        "seed_keywords": [
+            "economia", "macroeconomia", "microeconomia", "financas", "financeiro", "derivativos",
+            "inflacao", "juros", "cambial", "investimento", "investimentos", "bolsa", "ativos",
+            "liquidez", "valuation", "arbitragem", "portfolio", "contabilidade", "monetaria",
+        ],
+    },
+    {
+        "domain_slug": "direito_e_jurisprudencia",
+        "note_name": "Neuronio_Dinamico_Direito_e_Jurisprudencia",
+        "title": "Neurônio Especialista (Neurogênese) — Ciências Jurídicas, Direito & Regulação",
+        "specialty": "Direito Constitucional, Tributário, Societário, Contratos, Compliance e Jurisprudência",
+        "lobe": "Neocórtex Normativo — Ciências Jurídicas",
+        "seed_keywords": [
+            "direito", "juridico", "juridica", "tributario", "tributacao", "societario",
+            "constitucional", "contrato", "contratos", "jurisprudencia", "legislacao",
+            "compliance", "holding", "civil", "penal", "regulatorio", "licitacao",
+        ],
+    },
+    {
+        "domain_slug": "quimica_e_materiais",
+        "note_name": "Neuronio_Dinamico_Quimica_e_Materiais",
+        "title": "Neurônio Especialista (Neurogênese) — Química Avançada & Ciência dos Materiais",
+        "specialty": "Química Orgânica/Inorgânica, Catálise, Polímeros, Nanotecnologia e Engenharia de Materiais",
+        "lobe": "Neocórtex Científico — Ciências Químicas",
+        "seed_keywords": [
+            "quimica", "organica", "inorganica", "polimeros", "catalise", "estequiometria",
+            "nanotecnologia", "materiais", "cristalografia", "eletroquimica", "molecula",
+        ],
+    },
+    {
+        "domain_slug": "aeroespacial_e_robotica",
+        "note_name": "Neuronio_Dinamico_Aeroespacial_e_Robotica",
+        "title": "Neurônio Especialista (Neurogênese) — Engenharia Aeroespacial, Orbital & Robótica",
+        "specialty": "Mecânica Orbital, Propulsão, Aerodinâmica, Satélites, Controle e Robótica Autônoma",
+        "lobe": "Neocórtex Tecnológico — Aeroespacial & Mecatrônica",
+        "seed_keywords": [
+            "aeroespacial", "orbital", "propulsao", "foguete", "aerodinamica", "robotica",
+            "mecatronica", "satelite", "satelites", "cinematica", "atuadores", "telemetria",
+        ],
+    },
+    {
+        "domain_slug": "filosofia_e_humanidades",
+        "note_name": "Neuronio_Dinamico_Filosofia_e_Humanidades",
+        "title": "Neurônio Especialista (Neurogênese) — Filosofia, Psicologia & Ciências Humanas",
+        "specialty": "Epistemologia, Ética, Psicologia Cognitiva, Geopolítica, História e Antropologia",
+        "lobe": "Neocórtex Humanístico — Filosofia & Humanidades",
+        "seed_keywords": [
+            "filosofia", "ontologia", "etica", "metafisica", "psicologia", "psicanalise",
+            "sociologia", "antropologia", "historia", "geopolitica", "fenomenologia",
+        ],
+    },
+]
+
+
+def _classify_tokens_to_macro_domain(norm_tokens: List[str]) -> Dict[str, Any]:
+    """
+    Abstrai micro-conceitos específicos (ex.: 'dilatacao temporal', 'dobramento de proteinas')
+    para uma Grande Área do Conhecimento (ex.: 'Física Avançada', 'Biologia e Medicina'),
+    evitando a criação de neurônios hiper-nichados.
+    """
+    best_macro: Optional[Dict[str, Any]] = None
+    best_hits = 0
+
+    for macro in MACRO_ONTOLOGY_TAXONOMY:
+        seeds = {_normalize_token(s) for s in macro["seed_keywords"]}
+        hits = sum(
+            1
+            for tok in norm_tokens
+            if tok in seeds or any(tok.startswith(s[:5]) or s.startswith(tok[:5]) for s in seeds if len(s) >= 5)
+        )
+        if hits > best_hits:
+            best_hits = hits
+            best_macro = macro
+
+    if best_macro is not None and best_hits > 0:
+        merged_kws = list(dict.fromkeys(best_macro["seed_keywords"] + norm_tokens[:6]))
+        return {
+            "domain_slug": best_macro["domain_slug"],
+            "note_name": best_macro["note_name"],
+            "title": best_macro["title"],
+            "specialty": best_macro["specialty"],
+            "lobe": best_macro["lobe"],
+            "keywords": merged_kws,
+        }
+
+    # Fallback de abstração ontológica para uma Grande Área emergente baseada no radical principal
+    primary = norm_tokens[0]
+    domain_slug = f"ciencias_{primary}"[:36]
+    pretty = primary.capitalize()
+    return {
+        "domain_slug": domain_slug,
+        "note_name": f"Neuronio_Dinamico_Ciencias_{pretty}",
+        "title": f"Neurônio Especialista (Neurogênese) — Ciências e Estudos Avançados em {pretty}",
+        "specialty": f"Grande Área de Estudos Avançados em {pretty} e Subdomínios Correlatos",
+        "lobe": "Neocórtex de Expansão Dinâmica (Macro-Domínio)",
+        "keywords": norm_tokens[:10],
+    }
 
 
 def _normalize_token(word: str) -> str:
@@ -418,15 +550,41 @@ class SynapticPlasticityMemory:
         if covered_by_canonical:
             return None, False
 
-        # 3. Domínio Inédito Detectado -> Neurogênese Dinâmica!
-        domain_terms = norm_tokens[:3]
-        domain_slug = "_".join(domain_terms)[:36]
+        # 3. Abstrai o micro-conceito para a Grande Área do Conhecimento (Macro-Domínio Ontológico)
+        macro_info = _classify_tokens_to_macro_domain(norm_tokens)
+        domain_slug = macro_info["domain_slug"]
         neuron_id = f"neuron_dyn_{domain_slug}"
-        pretty_domain = " & ".join(t.capitalize() for t in domain_terms)
-        note_name = f"Neuronio_Dinamico_{domain_slug}"
-        title = f"Neurônio Dinâmico (Neurogênese) — Especialista em {pretty_domain}"
-        specialty = f"Especialista Autogerado em {pretty_domain} (Domínio Epistêmico Sob Demanda)"
-        lobe = "Neocórtex de Expansão Dinâmica (Neurogênese)"
+
+        # Verifica se o Macro-Neurônio dessa Grande Área já existe (mesmo que acionado por outro sub-conceito)
+        for sp in existing_spawned:
+            if sp.neuron_id == neuron_id or sp.domain_slug == domain_slug:
+                merged_keywords = list(dict.fromkeys(sp.keywords + norm_tokens[:5]))
+                with self._lock:
+                    self._conn.execute(
+                        "UPDATE spawned_neurons SET activations_count = activations_count + 1, keywords_json = ? WHERE neuron_id = ?;",
+                        (json.dumps(merged_keywords, ensure_ascii=False), sp.neuron_id),
+                    )
+                    self._conn.commit()
+                return (
+                    SpawnedNeuronSpec(
+                        neuron_id=sp.neuron_id,
+                        domain_slug=sp.domain_slug,
+                        title=sp.title,
+                        specialty=sp.specialty,
+                        lobe=sp.lobe,
+                        note_name=sp.note_name,
+                        keywords=merged_keywords,
+                        activations_count=sp.activations_count + 1,
+                        created_utc=sp.created_utc,
+                    ),
+                    False,
+                )
+
+        note_name = macro_info["note_name"]
+        title = macro_info["title"]
+        specialty = macro_info["specialty"]
+        lobe = macro_info["lobe"]
+        keywords_list = macro_info["keywords"]
         now = utc_now_iso()
 
         with self._lock:
@@ -443,7 +601,7 @@ class SynapticPlasticityMemory:
                     specialty,
                     lobe,
                     note_name,
-                    json.dumps(norm_tokens[:8], ensure_ascii=False),
+                    json.dumps(keywords_list, ensure_ascii=False),
                     now,
                 ),
             )
@@ -456,7 +614,7 @@ class SynapticPlasticityMemory:
             specialty=specialty,
             lobe=lobe,
             note_name=note_name,
-            keywords=norm_tokens[:8],
+            keywords=keywords_list,
             activations_count=1,
             created_utc=now,
         )
