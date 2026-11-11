@@ -39,55 +39,112 @@ from .schemas import utc_now_iso
 NEURON_HUB_MAP: Dict[str, Dict[str, Any]] = {
     "neuron_sensory_input": {
         "note_name": "Neuronio_00_Talamo_Sensorial",
-        "title": "Tálamo Sensorial (Decomposição Topológica)",
-        "specialty": "Decomposição de Estímulos e Compilação do ExecutionDAG (Algoritmo de Kahn)",
+        "title": "Tálamo Sensorial Adaptativo (Decomposição Topológica v3.0)",
+        "specialty": "Decomposição de Estímulos nos 4 Lobos Corticais e Compilação do ExecutionDAG (Algoritmo de Kahn)",
         "wave": 0,
         "downstream": [
             "Neuronio_01_Logica_e_Matematica",
             "Neuronio_04_Fatos_e_Proveniencia",
+            "Neuronio_07_Criptografia_e_Seguranca_ZeroTrust",
         ],
     },
     "neuron_logic_math": {
         "note_name": "Neuronio_01_Logica_e_Matematica",
-        "title": "Neurônio Especialista 01 — Lógica Formal & Matemática",
+        "title": "Neurônio Especialista 01 — Lógica Formal & Matemática (Lobo Frontal)",
         "specialty": "Lógica Formal, Invariantes Algébricos e Solvers Z3 SMT-LIB",
         "wave": 1,
         "downstream": [
             "Neuronio_02_Engenharia_de_Sistemas",
             "Neuronio_03_Estrategia_e_Risco",
+            "Neuronio_08_Inferencia_Causal_e_Contrafactual",
         ],
     },
     "neuron_epistemic_facts": {
         "note_name": "Neuronio_04_Fatos_e_Proveniencia",
-        "title": "Neurônio Especialista 04 — Auditoria Factual & Proveniência",
+        "title": "Neurônio Especialista 04 — Auditoria Factual & Proveniência (Lobo Temporal)",
         "specialty": "Rastreamento de ProvenancePointers, CoALA RAG FTS5 e Conferência Literal",
         "wave": 1,
         "downstream": [
             "Neuronio_02_Engenharia_de_Sistemas",
             "Neuronio_03_Estrategia_e_Risco",
+            "Neuronio_08_Inferencia_Causal_e_Contrafactual",
+        ],
+    },
+    "neuron_crypto_security": {
+        "note_name": "Neuronio_07_Criptografia_e_Seguranca_ZeroTrust",
+        "title": "Neurônio Especialista 07 — Criptografia Aplicada & Segurança Zero-Trust (Lobo Parietal)",
+        "specialty": "Assinaturas Ed25519, Cadeia SHA-256, Âncoras Externas e Auditoria de Superfície de Ataque",
+        "wave": 1,
+        "downstream": [
+            "Neuronio_02_Engenharia_de_Sistemas",
+            "Neuronio_03_Estrategia_e_Risco",
+            "Neuronio_08_Inferencia_Causal_e_Contrafactual",
         ],
     },
     "neuron_systems_engineering": {
         "note_name": "Neuronio_02_Engenharia_de_Sistemas",
-        "title": "Neurônio Especialista 02 — Engenharia de Software & Sistemas",
+        "title": "Neurônio Especialista 02 — Engenharia de Software & Sistemas (Lobo Executivo)",
         "specialty": "Síntese de Código Verificável, AST Allowlist e Execução em Sandbox V2",
         "wave": 2,
         "downstream": [
-            "Neuronio_05_Semantica_e_Didatica",
+            "Neuronio_09_Metacognicao_e_Calibracao_Epistemica",
+            "Neuronio_10_Hipocampo_Consolidacao_Sinaptica",
+            "Neuronio_11_Planejador_Recursivo_SubDAG",
         ],
     },
     "neuron_strategy_risk": {
         "note_name": "Neuronio_03_Estrategia_e_Risco",
-        "title": "Neurônio Especialista 03 — Planejamento & Gestão de Riscos",
+        "title": "Neurônio Especialista 03 — Planejamento & Gestão de Riscos (Lobo Parietal)",
         "specialty": "Modelagem de Ameaças, BFT Epistêmico, HardBudget e Contenção de Falhas",
         "wave": 2,
+        "downstream": [
+            "Neuronio_09_Metacognicao_e_Calibracao_Epistemica",
+            "Neuronio_10_Hipocampo_Consolidacao_Sinaptica",
+            "Neuronio_11_Planejador_Recursivo_SubDAG",
+        ],
+    },
+    "neuron_causal_counterfactual": {
+        "note_name": "Neuronio_08_Inferencia_Causal_e_Contrafactual",
+        "title": "Neurônio Especialista 08 — Inferência Causal & Contrafactual (Lobo Frontal)",
+        "specialty": "Inferência Causal (Pearl Do-Calculus), Análise de Causa-Raiz e Simulação Contrafactual",
+        "wave": 2,
+        "downstream": [
+            "Neuronio_09_Metacognicao_e_Calibracao_Epistemica",
+            "Neuronio_10_Hipocampo_Consolidacao_Sinaptica",
+            "Neuronio_11_Planejador_Recursivo_SubDAG",
+        ],
+    },
+    "neuron_metacognition_calibration": {
+        "note_name": "Neuronio_09_Metacognicao_e_Calibracao_Epistemica",
+        "title": "Neurônio Especialista 09 — Metacognição & Calibração Epistêmica (Lobo Pré-Frontal)",
+        "specialty": "Calibração de Certeza (Brier Score), Detecção de Lacunas Epistêmicas e Auto-Auditoria",
+        "wave": 3,
+        "downstream": [
+            "Neuronio_05_Semantica_e_Didatica",
+        ],
+    },
+    "neuron_episodic_consolidation": {
+        "note_name": "Neuronio_10_Hipocampo_Consolidacao_Sinaptica",
+        "title": "Neurônio Especialista 10 — Hipocampo & Consolidação Sináptica",
+        "specialty": "Plasticidade Sináptica de Longo Prazo e Aprendizado Permanente de Restrições Negativas",
+        "wave": 3,
+        "downstream": [
+            "Neuronio_05_Semantica_e_Didatica",
+            "Sabedoria_Sinaptica_Hipocampo",
+        ],
+    },
+    "neuron_autonomous_planner": {
+        "note_name": "Neuronio_11_Planejador_Recursivo_SubDAG",
+        "title": "Neurônio Especialista 11 — Planejador Recursivo de Sub-DAGs (Córtex Pré-Motor)",
+        "specialty": "Decomposição Multi-Horizonte, Alocação de HardBudget e Neurogênese de Sub-DAGs",
+        "wave": 3,
         "downstream": [
             "Neuronio_05_Semantica_e_Didatica",
         ],
     },
     "neuron_semantics_didactics": {
         "note_name": "Neuronio_05_Semantica_e_Didatica",
-        "title": "Neurônio Especialista 05 — Semântica & Síntese Conceitual",
+        "title": "Neurônio Especialista 05 — Semântica & Síntese Conceitual (Lobo Temporal)",
         "specialty": "Alinhamento Semântico Estrito, Clareza Estrutural e Consolidação de Artefatos",
         "wave": 3,
         "downstream": [
@@ -96,8 +153,8 @@ NEURON_HUB_MAP: Dict[str, Dict[str, Any]] = {
     },
     "neuron_convergence_synthesis": {
         "note_name": "Neuronio_06_Convergencia_e_Sintese",
-        "title": "Neurônio de Convergência e Síntese Global",
-        "specialty": "Validação de Certificados SHA-256/Ed25519 e Emissão do Veredito Córtex",
+        "title": "Neurônio de Convergência e Síntese Global (Onda Final)",
+        "specialty": "Validação de Certificados SHA-256/Ed25519 dos 10 Especialistas e Emissão do Veredito Córtex",
         "wave": 4,
         "downstream": [],
     },
@@ -188,6 +245,7 @@ class ObsidianVaultBridge:
     DIR_EXECUTIONS = "04_Certificados_e_Execucoes"
     DIR_EVENTS = "04_Certificados_e_Execucoes/Eventos_Merkle_DAG"
     DIR_CANVAS = "05_Mapas_Visuais_Canvas"
+    DIR_HIPPOCAMPUS = "06_Sabedoria_Consolidada_Hipocampo"
     MOC_FILENAME = "00_Painel_Central_MOC.md"
 
     def __init__(self, vault_path: str | Path) -> None:
@@ -201,6 +259,7 @@ class ObsidianVaultBridge:
             self.DIR_EXECUTIONS,
             self.DIR_EVENTS,
             self.DIR_CANVAS,
+            self.DIR_HIPPOCAMPUS,
         ):
             (self.vault_root / rel).mkdir(parents=True, exist_ok=True)
 
@@ -231,6 +290,7 @@ class ObsidianVaultBridge:
             {"query": f"path:{self.DIR_AXIOMS}", "color": {"a": 1, "rgb": 439996}},
             {"query": f"path:{self.DIR_SEMANTIC}", "color": {"a": 1, "rgb": 1096065}},
             {"query": f"path:{self.DIR_NEURONS}", "color": {"a": 1, "rgb": 9133302}},
+            {"query": f"path:{self.DIR_HIPPOCAMPUS}", "color": {"a": 1, "rgb": 15426466}},
             {"query": "tag:#verdict/REJECTED", "color": {"a": 1, "rgb": 15680580}},
             {"query": f"path:{self.DIR_EXECUTIONS}", "color": {"a": 1, "rgb": 3900150}},
         ]
@@ -865,18 +925,12 @@ class ObsidianVaultBridge:
         ]
         edges: List[Dict[str, Any]] = []
 
-        # Posicionamento visual por índice dos certificados emitidos
-        coords = [
-            (80, 0),
-            (80, 320),
-            (500, 0),
-            (500, 320),
-            (920, 160),
-        ]
-
         cert_items = list(certificates.items())
         for idx, (node_id, cert) in enumerate(cert_items):
-            cx, cy = coords[idx % len(coords)]
+            col = idx // 3
+            row = idx % 3
+            cx = 80 + col * 420
+            cy = -120 + row * 260
             c_status = cert.get("status", "APPROVED")
             c_color = "4" if c_status == "APPROVED" else "1"
             c_hash = str(cert.get("certificate_hash", ""))[:16]
@@ -925,12 +979,13 @@ class ObsidianVaultBridge:
             )
 
         conv_color = "4" if status == "APPROVED" else "1"
+        max_col = max((len(cert_items) - 1) // 3, 0) + 1
         nodes.append(
             {
                 "id": "conv_final",
                 "type": "text",
-                "x": 1360,
-                "y": 160,
+                "x": 80 + max_col * 420 + 60,
+                "y": 140,
                 "width": 360,
                 "height": 210,
                 "color": conv_color,
@@ -1001,14 +1056,14 @@ class ObsidianVaultBridge:
         content = (
             "---\n"
             "type: moc_dashboard\n"
-            "title: \"Painel Central — MY BRAIN (Cérebro Cognitivo Fractal v2.0)\"\n"
+            "title: \"Painel Central — MY BRAIN (Cérebro Cognitivo Fractal v3.0 Estendido)\"\n"
             f"updated_utc: {utc_now_iso()}\n"
             "tags:\n"
             "  - moc\n"
             "  - my_brain\n"
             "---\n\n"
-            "# 🧠 Painel Central — MY BRAIN (`Cérebro Cognitivo Fractal v2.0`)\n\n"
-            "> **Bem-vindo ao Córtex Visual do seu Cérebro de Agentes!**\n"
+            "# 🧠 Painel Central — MY BRAIN (`Cérebro Cognitivo Fractal v3.0`)\n\n"
+            "> **Bem-vindo ao Córtex Visual Estendido (12 Nós Neurais em 4 Lobos + Hipocampo)!**\n"
             "> Pressione `Ctrl + G` no Obsidian para abrir o **Graph View** com setas causais e grupos cromáticos pré-configurados, ou abra os quadros interativos em `05_Mapas_Visuais_Canvas/`.\n\n"
             "## 📊 Telemetria Forense em Tempo Real\n\n"
             f"- **Integridade Criptográfica da Cadeia**: `{chain_status}`\n"
@@ -1018,18 +1073,27 @@ class ObsidianVaultBridge:
             "---\n\n"
             "## 🗺️ Quadros Visuais Interativos (Obsidian Canvas)\n\n"
             "- [[01_Arquitetura_Macro_e_Micro_Cortex.canvas|📐 01. Arquitetura Completa Macro e Micro-Córtex (Canvas)]]\n"
-            "- [[02_Ultima_Execucao_Cortex_DAG.canvas|⚡ 02. Última Execução do Córtex em DAG (Canvas)]]\n\n"
+            "- [[02_Ultima_Execucao_Cortex_DAG.canvas|⚡ 02. Última Execução do Córtex em DAG (Canvas)]]\n"
+            "- [[Sabedoria_Sinaptica_Hipocampo|🧬 03. Hipocampo: Sabedoria Sináptica & Restrições Aprendidas]]\n\n"
             "---\n\n"
-            "## 🧬 Topologia dos 7 Neurônios do Córtex (`03_Neuronios_Especialistas/`)\n\n"
-            "1. **Onda 0 (Entrada Sensorial)**: [[Neuronio_00_Talamo_Sensorial]]\n"
-            "2. **Onda 1 (Fundação Formal & Factual)**:\n"
-            "   - [[Neuronio_01_Logica_e_Matematica]]\n"
-            "   - [[Neuronio_04_Fatos_e_Proveniencia]]\n"
-            "3. **Onda 2 (Engenharia & Risco)**:\n"
-            "   - [[Neuronio_02_Engenharia_de_Sistemas]]\n"
-            "   - [[Neuronio_03_Estrategia_e_Risco]]\n"
-            "4. **Onda 3 (Síntese Conceitual)**: [[Neuronio_05_Semantica_e_Didatica]]\n"
-            "5. **Onda 4 (Veredito Global)**: [[Neuronio_06_Convergencia_e_Sintese]]\n\n"
+            "## 🧬 Topologia Estendida: 12 Nós Neurais em 4 Lobos Corticais (`03_Neuronios_Especialistas/`)\n\n"
+            "1. **Onda 0 (Entrada Sensorial Adaptativa)**:\n"
+            "   - [[Neuronio_00_Talamo_Sensorial]]\n"
+            "2. **Onda 1 (Fundação Formal, Factual e Criptográfica)**:\n"
+            "   - [[Neuronio_01_Logica_e_Matematica]] *(Lobo Frontal Formal)*\n"
+            "   - [[Neuronio_04_Fatos_e_Proveniencia]] *(Lobo Temporal Semântico)*\n"
+            "   - [[Neuronio_07_Criptografia_e_Seguranca_ZeroTrust]] *(Lobo Parietal Criptográfico)*\n"
+            "3. **Onda 2 (Engenharia, Causalidade e Risco BFT)**:\n"
+            "   - [[Neuronio_02_Engenharia_de_Sistemas]] *(Lobo Executivo de Engenharia)*\n"
+            "   - [[Neuronio_03_Estrategia_e_Risco]] *(Lobo Parietal de Risco & BFT)*\n"
+            "   - [[Neuronio_08_Inferencia_Causal_e_Contrafactual]] *(Lobo Frontal Do-Calculus)*\n"
+            "4. **Onda 3 (Metacognição, Hipocampo, Planejamento Recursivo e Semântica)**:\n"
+            "   - [[Neuronio_09_Metacognicao_e_Calibracao_Epistemica]] *(Lobo Pré-Frontal Metacognitivo)*\n"
+            "   - [[Neuronio_10_Hipocampo_Consolidacao_Sinaptica]] *(Hipocampo de Plasticidade)*\n"
+            "   - [[Neuronio_11_Planejador_Recursivo_SubDAG]] *(Córtex Pré-Motor Recursivo)*\n"
+            "   - [[Neuronio_05_Semantica_e_Didatica]] *(Lobo Temporal de Síntese)*\n"
+            "5. **Onda 4 (Veredito Córtex Global)**:\n"
+            "   - [[Neuronio_06_Convergencia_e_Sintese]]\n\n"
             "---\n\n"
             "## 💎 Axiomas do Usuário (`01_Axiomas_do_Usuario/`)\n"
             "*Qualquer nota criada nesta pasta é ingerida como `AXIOM_USER` inegociável pelo Cérebro:*\n\n"
@@ -1046,6 +1110,55 @@ class ObsidianVaultBridge:
         )
         moc_path.write_text(content, encoding="utf-8")
         return moc_path
+
+    def project_plasticity_to_vault(self, plasticity_memory: Any) -> Path:
+        """
+        Exporta as regras de Plasticidade Sináptica de Longo Prazo (`NEGATIVE_CONSTRAINT` de Rollbacks
+        e `DISTILLED_INVARIANT` de execuções aprovadas) para `06_Sabedoria_Consolidada_Hipocampo/`.
+        """
+        self._ensure_directories()
+        hippo_dir = self.vault_root / self.DIR_HIPPOCAMPUS
+        rules = plasticity_memory.list_all_rules(limit=60)
+
+        neg_rules = [r for r in rules if r.rule_type == "NEGATIVE_CONSTRAINT"]
+        inv_rules = [r for r in rules if r.rule_type == "DISTILLED_INVARIANT"]
+
+        neg_md = "\n".join(
+            f"- **`{r.rule_id}`** (Neurônio: `{r.neuron_id}` · Origem: [[{r.source_event_id}]]): {r.rule_text}"
+            for r in neg_rules
+        ) or "- *(Nenhuma restrição negativa acumulada)*"
+
+        inv_md = "\n".join(
+            f"- **`{r.rule_id}`** (Neurônio: [[{NEURON_HUB_MAP.get(r.neuron_id, {}).get('note_name', '00_Painel_Central_MOC')}]] · Confiança: `{r.confidence}`): {r.rule_text}"
+            for r in inv_rules[:25]
+        ) or "- *(Nenhum invariante destilado ainda)*"
+
+        hub_path = hippo_dir / "Sabedoria_Sinaptica_Hipocampo.md"
+        content = (
+            "---\n"
+            "type: hippocampus_plasticity\n"
+            "title: \"Sabedoria Sináptica Consolidada (Hipocampo v3.0)\"\n"
+            f"total_rules: {len(rules)}\n"
+            f"negative_constraints: {len(neg_rules)}\n"
+            f"distilled_invariants: {len(inv_rules)}\n"
+            f"updated_utc: {utc_now_iso()}\n"
+            "tags:\n"
+            "  - hippocampus\n"
+            "  - synaptic_plasticity\n"
+            "---\n\n"
+            "# 🧬 Hipocampo — Sabedoria Sináptica Consolidada de Longo Prazo\n\n"
+            "- **Conectado ao Painel Central**: [[00_Painel_Central_MOC]]\n"
+            "- **Neurônio Gestor**: [[Neuronio_10_Hipocampo_Consolidacao_Sinaptica]]\n"
+            f"- **Total de Regras Sinápticas Ativas**: `{len(rules)}` (`{len(neg_rules)}` anticorpos anti-falha + `{len(inv_rules)}` invariantes certificados)\n\n"
+            "## 🛡️ Anticorpos Epistêmicos (`NEGATIVE_CONSTRAINT` Aprendidos de Rollbacks Causais)\n"
+            "*Injetados automaticamente nas próximas execuções para impedir reincidência de erros V1/V2/V3:*\n\n"
+            f"{neg_md}\n\n"
+            "---\n\n"
+            "## 💎 Invariantes Certificados Destilados (`DISTILLED_INVARIANT`)\n\n"
+            f"{inv_md}\n"
+        )
+        hub_path.write_text(content, encoding="utf-8")
+        return hub_path
 
     def _update_welcome_note(self) -> None:
         welcome_path = self.vault_root / "Bem-vindo.md"

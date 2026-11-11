@@ -20,6 +20,7 @@ import urllib.request
 
 from .cortex import FractalCognitiveCortex
 from .event_store import EpistemicEventStore
+from .extended_cortex_v3 import ExtendedCognitiveCortexV3, SynapticPlasticityMemory
 from .llm_bridge import call_gemini_json
 from .obsidian_bridge import ObsidianLocalRestClient, ObsidianVaultBridge
 from .rag_memory import CoALAMemoryStore
@@ -198,15 +199,16 @@ class JarvisCognitiveAssistant:
 
         # 2. Ingerir notas do Obsidian e buscar contexto no CoALAMemoryStore (FTS5 BM25)
         mem_store = CoALAMemoryStore(db_path=self.rag_db_path)
+        plasticity = SynapticPlasticityMemory(db_path=self.rag_db_path)
         store = EpistemicEventStore(db_path=self.db_path, jsonl_path=self.jsonl_path)
         try:
             ing_report = self.bridge.ingest_vault_knowledge(mem_store)
             rag_hits = mem_store.search_semantic(user_command, top_k=3)
             user_axioms = mem_store.list_user_axioms()
 
-            # 3. Executar missão no Córtex Global (Tálamo -> 5 Especialistas -> Convergência)
-            cortex = FractalCognitiveCortex(event_store=store)
-            cortex_res = cortex.process(
+            # 3. Executar missão no Córtex Estendido v3.0 (Tálamo -> 10 Especialistas em 4 Lobos -> Convergência + Hipocampo)
+            cortex = ExtendedCognitiveCortexV3(event_store=store, plasticity_memory=plasticity)
+            cortex_res = cortex.process_v3(
                 objective=user_command,
                 context={
                     "active_obsidian_note": active_note_title,
@@ -216,12 +218,14 @@ class JarvisCognitiveAssistant:
             )
             res_dict = cortex_res.to_dict()
 
-            # 4. Projetar execução, certificados e Canvas no Vault MY BRAIN
+            # 4. Projetar execução, certificados, Hipocampo e Canvas no Vault MY BRAIN
             proj = self.bridge.project_cortex_run_to_vault(
                 res_dict,
                 objective=user_command,
                 event_store=store,
             )
+            hippo_path = self.bridge.project_plasticity_to_vault(plasticity)
+            proj["hippocampus_note"] = str(hippo_path)
             self.bridge.update_central_moc(event_store=store, ingestion_report=ing_report)
 
             # 5. Abrir a nota da execução ou o Canvas ao vivo na janela do Obsidian via Local REST API
@@ -281,6 +285,7 @@ class JarvisCognitiveAssistant:
                 },
             }
         finally:
+            plasticity.close()
             mem_store.close()
             store.close()
 
