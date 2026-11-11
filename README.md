@@ -19,21 +19,32 @@ Diferente de sistemas baseados em LLMs solitários ou debates puramente verbais 
 ```text
 cerebro_cognitivo/
 ├── README.md                                  # Manual de Arquitetura e Operação
+├── run_mvp.py                                 # Entrypoint CLI / Studio HTTP / Sincronizador Obsidian
 ├── docs/
 │   ├── 00_arquitetura_canonica.html           # Especificação Visual Canônica (Mermaid + PDF-ready)
 │   ├── 01_fundamentos_cientificos.md          # Provas matemáticas (Condorcet, BFT, Merkle-DAG)
-│   └── 02_manual_auditoria_e_metricas.md      # Relatório empírico da bateria de Engenharia de Caos
+│   ├── 02_manual_auditoria_e_metricas.md      # Relatório empírico da bateria de Engenharia de Caos
+│   └── 03_auditoria_cruzada_cerebro_fractal.md # Auditoria Comparativa Cruzada e Evolução v2.0
 ├── core/
 │   ├── __init__.py                            # Exportação pública do núcleo
 │   ├── schemas.py                             # Contratos tipados, ProvenancePointer e Hashes SHA-256
 │   ├── event_store.py                         # Event Store imutável (SQLite WAL + Triggers Append-Only)
-│   ├── verifiers.py                           # Verificadores V1 (Lógica), V2 (Sandbox) e V3 (Red Team)
-│   ├── llm_bridge.py                          # Conector multi-provedor + Motor Neurosimbólico Determinístico
+│   ├── crypto_signing.py                      # Assinatura Ed25519 (RFC 8032) + ExternalHashAnchor
+│   ├── rag_memory.py                          # Memória Tripartite CoALA (FTS5 BM25 + Citação Literal V2)
+│   ├── formal_z3.py                           # Verificador Formal SMT-LIB v2 (Z3 Solver)
+│   ├── budget.py                              # HardBudget com Reserva Pessimista Worst-Case
+│   ├── obsidian_bridge.py                     # Ponte Bidirecional Obsidian Vault (MY BRAIN) + JSON Canvas
+│   ├── verifiers.py                           # Verificadores V1 (Lógica), V2 (Sandbox AST) e V3 (Red Team)
+│   ├── llm_bridge.py                          # Conector multi-provedor (Gemini / OpenAI) + Motor Determinístico
 │   ├── neuron.py                              # O Neurônio Cognitivo Composto (8 estágios + Rollback Causal)
 │   └── cortex.py                              # Orquestrador Macro em DAG (Tálamo, Especialistas e Convergência)
 ├── tests/
-│   ├── test_unit_core.py                      # Testes unitários determinísticos de todos os módulos
-│   └── chaos_benchmark.py                     # Bateria de Engenharia de Caos e Injeção de Falhas
+│   ├── test_event_store.py                    # Testes do SQLite WAL, triggers, Time-Travel e Rollback
+│   ├── test_neuron_and_verifiers.py           # Testes do Neurônio Composto e Verificadores V1/V2/V3
+│   ├── test_cortex_and_dashboard.py           # Testes do Algoritmo de Kahn, Córtex DAG e Telemetria
+│   ├── test_v2_upgrades.py                    # Testes v2.0 (Ed25519, CoALA FTS5, AST Allowlist, Z3, Budget)
+│   ├── test_obsidian_bridge.py                # Testes da Ponte Bidirecional Obsidian Vault (MY BRAIN)
+│   └── chaos_benchmark.py                     # Bateria de Engenharia de Caos e Injeção de Falhas (7 cenários)
 └── dashboard/
     ├── inspector_generator.py                 # Gerador do painel de auditoria forense
     └── inspector_telemetria.html              # Dashboard interativo com árvore de eventos e métricas reais
@@ -43,23 +54,32 @@ cerebro_cognitivo/
 
 ## 3. Garantias de Versionamento e Imutabilidade Epistêmica
 
-O sistema opera sob **duplo versionamento**:
+O sistema opera sob **triplo versionamento e projeção visual**:
 1. **Versionamento de Código e Documentação via Git**: Cada camada arquitetural é registrada em commits atômicos auditáveis.
 2. **Versionamento de Pensamento e Estado via Event Sourcing (`EpistemicEventStore`)**:
    - Armazenado em SQLite3 no modo `WAL` (*Write-Ahead Logging*) protegido por *triggers* `BEFORE UPDATE` e `BEFORE DELETE` que abortam qualquer tentativa de mutação histórica.
-   - Cada evento contém `previous_event_hash` e `content_hash` (`SHA-256`), formando uma cadeia criptográfica verificável via `verify_chain_integrity()`.
+   - Cada evento contém `previous_event_hash` e `content_hash` (`SHA-256`), além de suporte a assinatura `Ed25519` e ancoragem externa (`ExternalHashAnchor`).
    - Suporta **Time-Travel Debugging** (`checkout_state(event_id)`) e **Rollback Causal** (`branch_from(event_id, new_branch, reason)`).
+3. **Superfície Neural Bidirecional no Obsidian Vault (`MY BRAIN`)**:
+   - Ingere axiomas do usuário (`01_Axiomas_do_Usuario/`) e notas semânticas (`02_Conhecimento_Semantico/`) diretamente para a memória `CoALAMemoryStore` (SQLite FTS5 BM25) com conferência literal de citações pela Camada V2.
+   - Projeta os 7 Neurônios do Córtex, Certificados Criptográficos, Eventos do Merkle-DAG e quadros visuais nativos `.canvas` para o Graph View do Obsidian.
 
 ---
 
-## 4. Como Executar os Testes e a Bateria de Engenharia de Caos
+## 4. Como Executar os Testes, o MVP e a Sincronização com o Obsidian
 
 No terminal (a partir da raiz `cerebro_cognitivo/`):
 
 ```bash
-# 1. Executar a suíte de testes unitários determinísticos
+# 1. Executar toda a suíte de testes unitários (63 testes determinísticos)
 python -m unittest discover -s tests -p "test_*.py" -v
 
-# 2. Executar a Bateria de Engenharia de Caos e gerar o Dashboard de Telemetria
+# 2. Executar a Bateria de Engenharia de Caos (7 cenários adversariais)
 python tests/chaos_benchmark.py
+
+# 3. Sincronizar bidirecionalmente com o Vault MY BRAIN no Obsidian
+python run_mvp.py --sync-obsidian
+
+# 4. Executar uma missão no Córtex Global e projetar o DAG e Canvas no Obsidian
+python run_mvp.py --prompt "Projetar e certificar protocolo de autenticação zero-trust"
 ```

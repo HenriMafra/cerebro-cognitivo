@@ -317,14 +317,16 @@ class DeterministicMachineVerifier:
         # Execução em subprocess isolado
         try:
             proc = subprocess.run(
-                [sys.executable, "-I", "-c", runner_script],
+                [sys.executable, "-I", "-X", "utf8", "-c", runner_script],
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 timeout=timeout_sec,
             )
             duration_ms = (time.perf_counter() - t_start) * 1000
-            stdout_out = proc.stdout
-            stderr_out = proc.stderr
+            stdout_out = proc.stdout or ""
+            stderr_out = proc.stderr or ""
             exit_code = proc.returncode
 
         except subprocess.TimeoutExpired:
@@ -483,13 +485,15 @@ class AdversarialRedTeamVerifier:
 
                 try:
                     proc = subprocess.run(
-                        [sys.executable, "-I", "-c", adv_script],
+                        [sys.executable, "-I", "-X", "utf8", "-c", adv_script],
                         capture_output=True,
                         text=True,
+                        encoding="utf-8",
+                        errors="replace",
                         timeout=timeout_sec,
                     )
                     if proc.returncode != 0:
-                        err_detail = proc.stderr.strip() or f"Código quebrou com retorno {proc.returncode}"
+                        err_detail = (proc.stderr or "").strip() or f"Código quebrou com retorno {proc.returncode}"
                         # Extrair a mensagem do contraexemplo se presente
                         counterexample_msg = "Falha em caso de borda adversário."
                         for line in reversed(err_detail.splitlines()):

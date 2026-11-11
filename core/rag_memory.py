@@ -249,6 +249,32 @@ class CoALAMemoryStore:
             )
             self._conn.commit()
 
+    def add_user_axiom(self, axiom_id: str, statement: str) -> str:
+        """Registra ou atualiza um axioma explícito do usuário na memória CoALA."""
+        clean_id = axiom_id if axiom_id.startswith("ax_") else f"ax_{axiom_id}"
+        with self._lock:
+            self._conn.execute(
+                "INSERT OR REPLACE INTO user_axioms(axiom_id, statement, added_utc) VALUES (?, ?, ?);",
+                (clean_id, statement.strip(), utc_now_iso()),
+            )
+            self._conn.commit()
+        return clean_id
+
+    def list_user_axioms(self) -> List[Dict[str, str]]:
+        """Retorna todos os axiomas ativos declarados pelo usuário."""
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT axiom_id, statement, added_utc FROM user_axioms ORDER BY axiom_id ASC;"
+            ).fetchall()
+            return [
+                {
+                    "axiom_id": r["axiom_id"],
+                    "statement": r["statement"],
+                    "added_utc": r["added_utc"],
+                }
+                for r in rows
+            ]
+
     def close(self) -> None:
         with self._lock:
             self._conn.close()

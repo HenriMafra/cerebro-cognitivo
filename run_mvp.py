@@ -30,6 +30,8 @@ from core.schemas import (
 from core.event_store import EpistemicEventStore
 from core.neuron import CognitiveNeuron
 from core.cortex import FractalCognitiveCortex
+from core.rag_memory import CoALAMemoryStore
+from core.obsidian_bridge import ObsidianVaultBridge
 from dashboard.inspector_generator import generate_telemetry_dashboard
 from tests.chaos_benchmark import run_chaos_benchmark
 
@@ -38,6 +40,36 @@ DATA_DIR = PROJECT_ROOT / "data"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 DEFAULT_DB = DATA_DIR / "epistemic_brain.db"
 DEFAULT_JSONL = DATA_DIR / "epistemic_events.jsonl"
+DEFAULT_RAG_DB = DATA_DIR / "coala_memory.db"
+DEFAULT_OBSIDIAN_VAULT = Path(r"C:\Users\henri.mafra\Documents\MY BRAIN")
+
+
+def sync_obsidian_vault(vault_path: Path = DEFAULT_OBSIDIAN_VAULT) -> Dict[str, Any]:
+    """
+    Sincroniza bidirecionalmente o Vault do Obsidian (MY BRAIN) com o
+    CoALAMemoryStore (FTS5 BM25) e o EpistemicEventStore (SQLite WAL).
+    """
+    bridge = ObsidianVaultBridge(vault_path)
+    init_info = bridge.initialize_vault_structure()
+
+    mem_store = CoALAMemoryStore(db_path=str(DEFAULT_RAG_DB))
+    store = EpistemicEventStore(db_path=str(DEFAULT_DB), jsonl_path=str(DEFAULT_JSONL))
+    try:
+        ingestion = bridge.ingest_vault_knowledge(mem_store)
+        exported_events = bridge.sync_event_store_to_vault(store, max_events=50)
+        moc_path = bridge.update_central_moc(event_store=store, ingestion_report=ingestion)
+        return {
+            "vault_root": init_info["vault_root"],
+            "moc_path": str(moc_path),
+            "architecture_canvas_path": init_info["architecture_canvas_path"],
+            "axioms_ingested": ingestion.axioms_ingested,
+            "documents_ingested": ingestion.documents_ingested,
+            "total_chunks_indexed": ingestion.total_chunks_indexed,
+            "exported_events": exported_events,
+        }
+    finally:
+        mem_store.close()
+        store.close()
 
 
 def execute_objective_in_cortex(objective: str, inject_fault_mode: str = "none") -> Dict[str, Any]:
@@ -155,12 +187,37 @@ def execute_objective_in_cortex(objective: str, inject_fault_mode: str = "none")
             output_html_path=str(PROJECT_ROOT / "dashboard" / "inspector_telemetria.html"),
         )
 
+        # Projeção automática no Vault MY BRAIN do Obsidian (se presente)
+        obsidian_projection = None
+        if DEFAULT_OBSIDIAN_VAULT.exists():
+            bridge = ObsidianVaultBridge(DEFAULT_OBSIDIAN_VAULT)
+            bridge.initialize_vault_structure()
+            mem_store = CoALAMemoryStore(db_path=str(DEFAULT_RAG_DB))
+            try:
+                ing = bridge.ingest_vault_knowledge(mem_store)
+                proj = bridge.project_cortex_run_to_vault(
+                    result_payload,
+                    objective=objective,
+                    event_store=store,
+                )
+                bridge.update_central_moc(event_store=store, ingestion_report=ing)
+                obsidian_projection = {
+                    "vault_root": str(bridge.vault_root),
+                    **proj,
+                    "axioms_ingested": ing.axioms_ingested,
+                    "documents_ingested": ing.documents_ingested,
+                    "total_chunks_indexed": ing.total_chunks_indexed,
+                }
+            finally:
+                mem_store.close()
+
         return {
             "ok": True,
             "objective": objective,
             "inject_fault_mode": inject_fault_mode,
             "elapsed_ms": round(elapsed_ms, 2),
             "result": result_payload,
+            "obsidian": obsidian_projection,
             "dag_summary": {
                 "total_events": dag_summary["total_events"],
                 "total_branches": dag_summary["total_branches"],
@@ -206,6 +263,12 @@ def run_cli_one_shot(prompt: str, fault_mode: str = "none") -> None:
 
     print("-" * 78)
     print(f" Painel de Telemetria atualizado em: {PROJECT_ROOT / 'dashboard' / 'inspector_telemetria.html'}")
+    if response.get("obsidian"):
+        obs = response["obsidian"]
+        print(f" Obsidian Vault (MY BRAIN) sincronizado em: {obs['vault_root']}")
+        print(f"   • Nota da Execução : {obs['execution_note']}")
+        print(f"   • Canvas Visual    : {obs['execution_canvas']}")
+        print(f"   • Memória CoALA    : {obs['axioms_ingested']} axiomas, {obs['documents_ingested']} docs ({obs['total_chunks_indexed']} chunks)")
     print("=" * 78)
 
 
@@ -268,9 +331,30 @@ def main() -> None:
         help="Simula injeção de falha na Iteração 1 para demonstrar o Rollback Causal e auto-correção",
     )
     parser.add_argument("--chaos", action="store_true", help="Reexecuta os 7 cenários da Bateria de Engenharia de Caos")
+    parser.add_argument("--sync-obsidian", action="store_true", help="Sincroniza o Vault MY BRAIN do Obsidian com o Cérebro")
+    parser.add_argument(
+        "--obsidian-vault",
+        type=str,
+        default=str(DEFAULT_OBSIDIAN_VAULT),
+        help="Caminho do Vault do Obsidian (padrão: C:\\Users\\henri.mafra\\Documents\\MY BRAIN)",
+    )
     parser.add_argument("--serve", action="store_true", help="Inicia o servidor web local na porta 8765")
     parser.add_argument("--port", type=int, default=8765, help="Porta HTTP para o modo --serve (padrão: 8765)")
     args = parser.parse_args()
+
+    if args.sync_obsidian:
+        sync_info = sync_obsidian_vault(Path(args.obsidian_vault))
+        print("=" * 78)
+        print(" SINCRONIZAÇÃO BIDIRECIONAL OBSIDIAN VAULT (MY BRAIN) <-> CÉREBRO COGNITIVO")
+        print("=" * 78)
+        print(f" [VAULT ROOT]       : {sync_info['vault_root']}")
+        print(f" [PAINEL CENTRAL]   : {sync_info['moc_path']}")
+        print(f" [CANVAS ARQUITET.] : {sync_info['architecture_canvas_path']}")
+        print(f" [AXIOMAS INGERIDOS]: {sync_info['axioms_ingested']} axiomas ativos")
+        print(f" [DOCS SEMÂNTICOS]  : {sync_info['documents_ingested']} documentos ({sync_info['total_chunks_indexed']} chunks FTS5 BM25)")
+        print(f" [EVENTOS DAG]      : {sync_info['exported_events']} eventos projetados no Graph View")
+        print("=" * 78)
+        return
 
     if args.chaos:
         results = run_chaos_benchmark()
