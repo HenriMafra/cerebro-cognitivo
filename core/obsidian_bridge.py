@@ -182,6 +182,63 @@ class ObsidianIngestionReport:
         }
 
 
+DEFAULT_GITHUB_VAULT_REPO = "https://github.com/HenriMafra/MY-BRAIN.git"
+
+
+def discover_default_vault_path(auto_clone_if_missing: bool = False) -> Path:
+    """
+    Descobre de forma multiplataforma (Windows, Linux, macOS, Sessão em Nuvem/Codespaces)
+    a localização do Vault `MY BRAIN` / `MY-BRAIN`.
+    Se `auto_clone_if_missing=True` e o Vault não existir na máquina/container da nuvem,
+    faz `git clone https://github.com/HenriMafra/MY-BRAIN.git` automaticamente!
+    """
+    env_override = (
+        os.environ.get("OBSIDIAN_VAULT_PATH")
+        or os.environ.get("MY_BRAIN_VAULT_PATH")
+        or ""
+    ).strip()
+    if env_override:
+        return Path(env_override)
+
+    project_root = Path(__file__).resolve().parent.parent
+    candidates = [
+        Path(r"C:\Users\henri.mafra\Documents\MY BRAIN"),
+        Path.home() / "Documents" / "MY BRAIN",
+        Path.home() / "Documents" / "MY-BRAIN",
+        Path.home() / "MY-BRAIN",
+        Path.home() / "MY BRAIN",
+        project_root.parent / "MY-BRAIN",
+        project_root.parent / "MY BRAIN",
+        project_root / "MY-BRAIN",
+    ]
+    for cand in candidates:
+        try:
+            if cand.exists():
+                return cand
+        except Exception:
+            continue
+
+    target_clone = Path.home() / "Documents" / "MY-BRAIN"
+    if not target_clone.parent.exists():
+        target_clone = project_root.parent / "MY-BRAIN"
+
+    if auto_clone_if_missing:
+        try:
+            target_clone.parent.mkdir(parents=True, exist_ok=True)
+            subprocess.run(
+                ["git", "clone", DEFAULT_GITHUB_VAULT_REPO, str(target_clone)],
+                capture_output=True,
+                text=True,
+                timeout=25.0,
+            )
+            if target_clone.exists():
+                return target_clone
+        except Exception:
+            pass
+
+    return candidates[0]
+
+
 def resolve_vault_root(vault_path: str | Path) -> Path:
     """
     Resolve de forma inteligente a raiz real do Vault do Obsidian.
@@ -1245,22 +1302,22 @@ class ObsidianVaultBridge:
 
     def commit_vault_snapshot(self, message: str = "chore(brain-sync): snapshot automatico do Cerebro Cognitivo") -> Dict[str, Any]:
         """
-        Garante que o Vault tenha `.gitignore` seguro (excluindo `workspace.json` e chaves de plugins)
-        e cria um commit Git atômico caso haja mudanças no Vault `MY BRAIN`.
+        Garante que o Vault tenha `.gitignore` seguro (excluindo `workspace.json` e chaves do Local REST API,
+        mas preservando a configuração de auto-sync do `obsidian-git`) e cria um commit Git atômico
+        com `git pull --rebase --autostash` e `git push origin HEAD` automáticos para a nuvem!
         """
         gitignore_path = self.vault_root / ".gitignore"
-        if not gitignore_path.exists():
-            gitignore_path.write_text(
-                "# Ignorar estados voláteis de janela e segredos de plugins\n"
-                ".obsidian/workspace.json\n"
-                ".obsidian/workspace-mobile.json\n"
-                ".obsidian/cache\n"
-                ".obsidian/plugins/*/data.json\n"
-                ".trash/\n"
-                ".DS_Store\n"
-                "Thumbs.db\n",
-                encoding="utf-8",
-            )
+        safe_gitignore = (
+            "# Ignorar estados voláteis de janela e segredos de API local\n"
+            ".obsidian/workspace.json\n"
+            ".obsidian/workspace-mobile.json\n"
+            ".obsidian/cache\n"
+            ".obsidian/plugins/obsidian-local-rest-api/data.json\n"
+            ".trash/\n"
+            ".DS_Store\n"
+            "Thumbs.db\n"
+        )
+        gitignore_path.write_text(safe_gitignore, encoding="utf-8")
         try:
             if not (self.vault_root / ".git").exists():
                 subprocess.run(
@@ -1304,6 +1361,13 @@ class ObsidianVaultBridge:
             )
             if "origin" in (remote_proc.stdout or "").splitlines():
                 try:
+                    subprocess.run(
+                        ["git", "pull", "--rebase", "--autostash", "origin", "HEAD"],
+                        cwd=str(self.vault_root),
+                        capture_output=True,
+                        text=True,
+                        timeout=10.0,
+                    )
                     push_proc = subprocess.run(
                         ["git", "push", "origin", "HEAD"],
                         cwd=str(self.vault_root),
@@ -1341,7 +1405,7 @@ class ObsidianLocalRestClient:
     ) -> None:
         discovered_key = ""
         discovered_url = ""
-        target_vault = vault_path or Path(r"C:\Users\henri.mafra\Documents\MY BRAIN")
+        target_vault = vault_path or discover_default_vault_path()
         try:
             v_root = resolve_vault_root(target_vault)
             plugin_cfg = v_root / ".obsidian" / "plugins" / "obsidian-local-rest-api" / "data.json"

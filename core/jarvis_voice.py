@@ -23,7 +23,11 @@ from .event_store import EpistemicEventStore
 from .extended_cortex_v3 import ExtendedCognitiveCortexV3, SynapticPlasticityMemory
 from .llm_bridge import call_gemini_json
 from .meta_governance_layer import SevereMetaGovernanceLayer
-from .obsidian_bridge import ObsidianLocalRestClient, ObsidianVaultBridge
+from .obsidian_bridge import (
+    ObsidianLocalRestClient,
+    ObsidianVaultBridge,
+    discover_default_vault_path,
+)
 from .rag_memory import CoALAMemoryStore
 from .schemas import utc_now_iso
 
@@ -132,13 +136,13 @@ class JarvisCognitiveAssistant:
         db_path: str,
         jsonl_path: str,
         rag_db_path: str,
-        vault_path: str | Path = r"C:\Users\henri.mafra\Documents\MY BRAIN",
+        vault_path: Optional[str | Path] = None,
     ) -> None:
         load_local_env()
         self.db_path = db_path
         self.jsonl_path = jsonl_path
         self.rag_db_path = rag_db_path
-        self.vault_path = Path(vault_path)
+        self.vault_path = Path(vault_path) if vault_path else discover_default_vault_path(auto_clone_if_missing=True)
         self.bridge = ObsidianVaultBridge(self.vault_path)
         self.rest_client = ObsidianLocalRestClient(vault_path=self.vault_path)
 

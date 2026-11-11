@@ -33,7 +33,11 @@ from core.cortex import FractalCognitiveCortex
 from core.extended_cortex_v3 import ExtendedCognitiveCortexV3, SynapticPlasticityMemory
 from core.meta_governance_layer import SevereMetaGovernanceLayer
 from core.rag_memory import CoALAMemoryStore
-from core.obsidian_bridge import ObsidianVaultBridge, ObsidianLocalRestClient
+from core.obsidian_bridge import (
+    ObsidianVaultBridge,
+    ObsidianLocalRestClient,
+    discover_default_vault_path,
+)
 from core.jarvis_voice import JarvisCognitiveAssistant, save_local_env
 from dashboard.inspector_generator import generate_telemetry_dashboard
 from tests.chaos_benchmark import run_chaos_benchmark
@@ -44,7 +48,7 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 DEFAULT_DB = DATA_DIR / "epistemic_brain.db"
 DEFAULT_JSONL = DATA_DIR / "epistemic_events.jsonl"
 DEFAULT_RAG_DB = DATA_DIR / "coala_memory.db"
-DEFAULT_OBSIDIAN_VAULT = Path(r"C:\Users\henri.mafra\Documents\MY BRAIN")
+DEFAULT_OBSIDIAN_VAULT = discover_default_vault_path(auto_clone_if_missing=True)
 
 
 def sync_obsidian_vault(vault_path: Path = DEFAULT_OBSIDIAN_VAULT) -> Dict[str, Any]:
