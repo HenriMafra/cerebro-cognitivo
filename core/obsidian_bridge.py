@@ -20,9 +20,15 @@ Conecta o Vault do Obsidian ("MY BRAIN") ao motor transacional SQLite WAL
 from __future__ import annotations
 from dataclasses import dataclass, field
 import json
+import os
 from pathlib import Path
 import re
+import ssl
 from typing import Any, Dict, List, Optional, Tuple
+import urllib.error
+import urllib.parse
+import urllib.request
+import webbrowser
 
 from .event_store import EpistemicEventStore
 from .rag_memory import CoALAMemoryStore
@@ -1053,3 +1059,117 @@ class ObsidianVaultBridge:
             "3. **Ensinar Novos Fatos ou Axiomas**: Crie qualquer nota Markdown em `01_Axiomas_do_Usuario/` ou `02_Conhecimento_Semantico/` e execute `python run_mvp.py --sync-obsidian`.\n"
         )
         welcome_path.write_text(content, encoding="utf-8")
+
+    def build_obsidian_uri(self, relative_file_path: str) -> str:
+        """
+        Gera uma URI nativa `obsidian://open?vault=...&file=...` que funciona sem plugins
+        para abrir uma nota ou `.canvas` diretamente na janela ativa do aplicativo Obsidian.
+        """
+        vault_name = urllib.parse.quote(self.vault_root.name)
+        clean_file = relative_file_path.replace("\\", "/").lstrip("/")
+        file_encoded = urllib.parse.quote(clean_file)
+        return f"obsidian://open?vault={vault_name}&file={file_encoded}"
+
+    def open_in_obsidian_app(self, relative_file_path: str) -> str:
+        """Dispara o protocolo nativo `obsidian://` no sistema operacional para focar a nota/canvas."""
+        uri = self.build_obsidian_uri(relative_file_path)
+        try:
+            webbrowser.open(uri)
+        except Exception:
+            pass
+        return uri
+
+
+class ObsidianLocalRestClient:
+    """
+    Cliente nativo zero-dependência para o plugin comunitário `Local REST API` do Obsidian
+    (por padrão em `https://127.0.0.1:27124` ou `http://127.0.0.1:27123`).
+
+    Permite controle em tempo real da interface do Obsidian:
+    - Ler a nota que o usuário está visualizando agora (`get_active_note()`)
+    - Abrir notas ou arquivos `.canvas` diretamente na janela ativa (`open_file_in_ui()`)
+    - Disparar comandos internos da UI do Obsidian, como abrir o Graph View (`execute_command('graph:open')`)
+    - Buscar pelo motor interno do Obsidian (`search_simple()`)
+    """
+
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        base_url: Optional[str] = None,
+        timeout_sec: float = 3.0,
+    ) -> None:
+        self.api_key = (api_key or os.environ.get("OBSIDIAN_API_KEY", "")).strip()
+        self.base_url = (
+            base_url
+            or os.environ.get("OBSIDIAN_REST_URL", "https://127.0.0.1:27124")
+        ).rstrip("/")
+        self.timeout_sec = timeout_sec
+        # O plugin Local REST API usa certificado auto-assinado em localhost:27124
+        self._ssl_ctx = ssl.create_default_context()
+        self._ssl_ctx.check_hostname = False
+        self._ssl_ctx.verify_mode = ssl.CERT_NONE
+
+    def _request(
+        self,
+        method: str,
+        endpoint: str,
+        body: Optional[bytes] = None,
+        content_type: str = "application/json",
+        accept: str = "application/json",
+    ) -> Tuple[int, str]:
+        url = f"{self.base_url}/{endpoint.lstrip('/')}"
+        headers = {
+            "Accept": accept,
+            "Content-Type": content_type,
+        }
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+
+        req = urllib.request.Request(url, data=body, headers=headers, method=method)
+        try:
+            if url.startswith("https://"):
+                with urllib.request.urlopen(req, timeout=self.timeout_sec, context=self._ssl_ctx) as resp:
+                    return resp.status, resp.read().decode("utf-8", errors="replace")
+            else:
+                with urllib.request.urlopen(req, timeout=self.timeout_sec) as resp:
+                    return resp.status, resp.read().decode("utf-8", errors="replace")
+        except urllib.error.HTTPError as e:
+            err_body = e.read().decode("utf-8", errors="replace") if e.fp else str(e)
+            return e.code, err_body
+        except Exception as e:
+            return 0, str(e)
+
+    def check_status(self) -> Dict[str, Any]:
+        """Verifica se o plugin Local REST API está online e autenticado no Obsidian."""
+        code, raw = self._request("GET", "/")
+        if code == 200:
+            try:
+                data = json.loads(raw)
+                return {"online": True, "authenticated": bool(data.get("authenticated")), "raw": data}
+            except Exception:
+                return {"online": True, "authenticated": False, "raw": raw}
+        return {"online": False, "authenticated": False, "status_code": code, "error": raw}
+
+    def get_active_note(self) -> Dict[str, Any]:
+        """Retorna o conteúdo e metadados da nota que o usuário está olhando agora no Obsidian."""
+        code, raw = self._request("GET", "/active/", accept="application/vnd.olrapi.note+json")
+        if code == 200:
+            try:
+                return {"ok": True, "note": json.loads(raw)}
+            except Exception:
+                return {"ok": True, "content": raw}
+        return {"ok": False, "status_code": code, "error": raw}
+
+    def open_file_in_ui(self, relative_path: str, new_leaf: bool = False) -> Dict[str, Any]:
+        """Manda a interface do Obsidian abrir imediatamente uma nota ou `.canvas`."""
+        encoded = urllib.parse.quote(relative_path.replace("\\", "/").lstrip("/"))
+        query = "?newLeaf=true" if new_leaf else ""
+        code, raw = self._request("POST", f"/open/{encoded}{query}")
+        return {"ok": code in (200, 204), "status_code": code, "response": raw}
+
+    def execute_command(self, command_id: str) -> Dict[str, Any]:
+        """Executa qualquer comando nativo do Obsidian (ex.: `graph:open`, `app:reload`)."""
+        encoded = urllib.parse.quote(command_id)
+        code, raw = self._request("POST", f"/commands/{encoded}/")
+        return {"ok": code in (200, 204), "status_code": code, "response": raw}
+

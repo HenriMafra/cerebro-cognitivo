@@ -24,11 +24,13 @@ from core.cortex import FractalCognitiveCortex
 from core.event_store import EpistemicEventStore
 from core.obsidian_bridge import (
     NEURON_HUB_MAP,
+    ObsidianLocalRestClient,
     ObsidianVaultBridge,
     parse_markdown_frontmatter,
     resolve_vault_root,
 )
 from core.rag_memory import CoALAMemoryStore
+from mcp_brain_server import handle_jsonrpc_request
 
 
 class TestObsidianVaultBridge(unittest.TestCase):
@@ -124,6 +126,41 @@ class TestObsidianVaultBridge(unittest.TestCase):
                 self.assertGreaterEqual(len(canvas_obj["nodes"]), 7)
             finally:
                 store.close()
+
+    def test_05_obsidian_uri_and_mcp_server_jsonrpc(self) -> None:
+        """Valida geração de URI obsidian:// e chamadas JSON-RPC 2.0 do servidor MCP."""
+        with tempfile.TemporaryDirectory() as tmp:
+            vault_dir = Path(tmp) / "MY BRAIN"
+            bridge = ObsidianVaultBridge(vault_dir)
+            uri = bridge.build_obsidian_uri("05_Mapas_Visuais_Canvas/01_Arquitetura_Macro_e_Micro_Cortex.canvas")
+            self.assertIn("obsidian://open?vault=MY%20BRAIN", uri)
+            self.assertIn("01_Arquitetura_Macro_e_Micro_Cortex.canvas", uri)
+
+        # Testa handshake initialize do MCP
+        init_resp = handle_jsonrpc_request({"jsonrpc": "2.0", "id": 1, "method": "initialize"})
+        self.assertIsNotNone(init_resp)
+        self.assertEqual(init_resp["result"]["serverInfo"]["name"], "cerebro-cognitivo-obsidian-mcp")
+
+        # Testa listagem de ferramentas MCP
+        tools_resp = handle_jsonrpc_request({"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
+        tools = tools_resp["result"]["tools"]
+        tool_names = {t["name"] for t in tools}
+        self.assertIn("brain_execute_cortex", tool_names)
+        self.assertIn("brain_search_coala_rag", tool_names)
+        self.assertIn("obsidian_ui_control", tool_names)
+
+        # Testa verificação forense da cadeia via MCP tools/call
+        verify_resp = handle_jsonrpc_request(
+            {
+                "jsonrpc": "2.0",
+                "id": 3,
+                "method": "tools/call",
+                "params": {"name": "brain_verify_merkle_chain", "arguments": {}},
+            }
+        )
+        self.assertFalse(verify_resp["result"]["isError"])
+        payload = json.loads(verify_resp["result"]["content"][0]["text"])
+        self.assertTrue(payload["chain_integrity_valid"])
 
 
 if __name__ == "__main__":
